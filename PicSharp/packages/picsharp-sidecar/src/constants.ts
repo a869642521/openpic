@@ -1,0 +1,68 @@
+// const HOSTNAME = '::';
+export const HOSTNAME = '127.0.0.1';
+
+export enum SaveMode {
+  Overwrite = 'overwrite',
+  SaveAsNewFile = 'save_as_new_file',
+  SaveToNewFolder = 'save_to_new_folder',
+}
+
+export enum CodecType {
+  PNG = 'png',
+  JPEG = 'jpeg',
+  JPG = 'jpg',
+  WEBP = 'webp',
+  AVIF = 'avif',
+  TIFF = 'tiff',
+  TIF = 'tif',
+  SVG = 'svg',
+  GIF = 'gif',
+  // HEIC = 'heic',
+  // HEIF = 'heif',
+  TINYPNG = 'tinypng',
+}
+
+export enum ConvertFormat {
+  PNG = 'png',
+  JPG = 'jpg',
+  WEBP = 'webp',
+  AVIF = 'avif',
+}
+
+export const VALID_IMAGE_EXTS = [
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.avif',
+  '.svg',
+  '.gif',
+  '.tiff',
+  '.tif',
+];
+
+export enum ResizeFit {
+  Contain = 'contain',
+  Cover = 'cover',
+  Fill = 'fill',
+  Inside = 'inside',
+  Outside = 'outside',
+}
+
+export enum WatermarkType {
+  None = 'none',
+  Text = 'text',
+  Image = 'image',
+}
+
+export enum WatermarkPosition {
+  Top = 'north',
+  TopLeft = 'northwest',
+  TopRight = 'northeast',
+  Bottom = 'south',
+  BottomRight = 'southeast',
+  BottomLeft = 'southwest',
+  Left = 'west',
+  Right = 'east',
+  Center = 'center',
+}

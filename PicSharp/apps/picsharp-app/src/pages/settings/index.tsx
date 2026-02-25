@@ -1,0 +1,120 @@
+import { Outlet } from 'react-router';
+import { Separator } from '@/components/ui/separator';
+import { SidebarNav } from './sidebar-nav';
+import { Settings2, FileArchive, Panda, Info, FolderSync, RefreshCw } from 'lucide-react';
+import { useI18n } from '@/i18n';
+import { Button } from '@/components/ui/button';
+import useSettingsStore from '@/store/settings';
+import useSelector from '@/hooks/useSelector';
+import { sleep } from '@/utils';
+import { showAlertDialog } from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { AppContext } from '@/routes';
+import { useContext } from 'react';
+import WindowControl from '@/components/window-control';
+import { isMac } from '@/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useReport } from '@/hooks/useReport';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
+
+let clickCount = 0;
+
+export default function SettingsLayout() {
+  const t = useI18n();
+  const { reset, init } = useSettingsStore(useSelector(['reset', 'init']));
+  const { messageApi } = useContext(AppContext);
+  const r = useReport();
+  const sidebarNavItems = [
+    {
+      title: t('settings.general.title'),
+      href: '/settings/general',
+      icon: <Settings2 />,
+    },
+    {
+      title: t('settings.compression.title'),
+      href: '/settings/compression',
+      icon: <FileArchive />,
+    },
+    {
+      title: t('settings.tinypng.title'),
+      href: '/settings/tinypng',
+      icon: <Panda />,
+    },
+    {
+      title: t('settings.about.title'),
+      href: '/settings/about',
+      icon: <Info />,
+    },
+  ];
+
+  const handleReload = async () => {
+    r('settings_reload_click');
+    await init(true);
+    messageApi?.success(t('tips.settings_reload_success'));
+  };
+
+  const handleReset = () => {
+    r('settings_reset_click');
+    showAlertDialog({
+      title: t('settings.reset_all_confirm'),
+      cancelText: t('cancel'),
+      okText: t('confirm'),
+      onConfirm: async () => {
+        await sleep(1000);
+        await reset();
+        messageApi?.success(t('tips.settings_reset_success'));
+        r('settings_reset_success');
+      },
+    });
+  };
+
+  const handleOpenSettingDir = () => {
+    clickCount++;
+    if (clickCount === 5) {
+      revealItemInDir(useSettingsStore.getState().appDataDirPath);
+      clickCount = 0;
+    }
+  };
+
+  return (
+    <div className='flex h-full flex-col'>
+      <div
+        className={'flex h-[48px] items-center justify-end gap-1 px-2'}
+        data-tauri-drag-region='true'
+        onClick={handleOpenSettingDir}
+      >
+        <div className='flex items-center gap-1'>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant='ghost' size='icon' onClick={handleReload}>
+                <RefreshCw className='h-5 w-5' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.reload')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant='ghost' size='icon' onClick={handleReset}>
+                <FolderSync className='h-5 w-5' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.reset_all')}</TooltipContent>
+          </Tooltip>
+        </div>
+        <Separator orientation='vertical' className='h-4 bg-neutral-200 dark:bg-neutral-700' />
+        <WindowControl showControls={!isMac} showFullscreen={!isMac} />
+      </div>
+      {/* <Separator className='mb-4' /> */}
+      <div className='flex flex-1 flex-col space-y-4 overflow-auto lg:flex-row lg:space-y-0'>
+        <aside className='px-4 lg:w-1/6'>
+          <SidebarNav items={sidebarNavItems} />
+        </aside>
+        <ScrollArea className='mx-0 w-full flex-1'>
+          <div className='px-4 pb-6'>
+            <Outlet />
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+}

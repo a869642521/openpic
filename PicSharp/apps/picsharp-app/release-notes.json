@@ -1,0 +1,225 @@
+{
+  "releases": {
+    "2.2.7": {
+      "date": "2025-09-30",
+      "notes": [
+        "🐛 [BugFix] Comprehensively fix the issue of compression failure caused by differences in operating environments under different operating systems. After updating to the new version, it is recommended to click the reset button on the Settings page to format the application configuration, then restart. Before formatting, save the currently configured data (if the TinyPNG API Keys are configured, they can be exported as a file for easy import after formatting).",
+        "🐛 [修复] 对不同操作系统下，因运行环境差异而导致压缩失败问题进行全面修复。更新到新版本后，建议点击设置页面的重置按钮格式化应用配置，然后重启，格式化前保存好当前已配置的数据（如有配置TinyPNG API Keys，可进行导出为文件，方便格式化后再导入）",
+        "🚀 [Optimization] Enhance the stability of the application on Mac OS 26",
+        "🚀 [优化] 提升应用在Mac OS 26上的稳定性",
+        "⚙️ [New] Add Windows ARM64 installation package, built with Window 11 arm64 environment",
+        "⚙️ [新特性] 新增Windows ARM64安装包，使用Window 11 arm64环境构建"
+      ]
+    },
+    "2.2.6": {
+      "date": "2025-09-24",
+      "notes": [
+        "🐛 [BugFix] Partially fixed the compression failure issue on Windows and Mac due to differences in operating environments",
+        "🐛 [问题] 对Windows和Mac系统下，因运行环境差异而导致压缩失败问题的部分修复"
+      ]
+    },
+    "2.2.5": {
+      "date": "2025-09-24",
+      "notes": [
+        "🐛 [BugFix] Partially fixed the compression failure issue on Windows and Mac due to differences in operating environments",
+        "🐛 [问题] 对Windows和Mac系统下，因运行环境差异而导致压缩失败问题的部分修复"
+      ]
+    },
+    "2.2.4": {
+      "date": "2025-09-23",
+      "notes": [
+        "🚀 [Improvement] Use the same base as the operating system for file size conversion, and display it in the same way as the operating system.",
+        "🚀 [优化] 文件大小换算采用与操作系统一致的基准，展示上与操作系统保持一致。",
+        "🐛 [BugFix] Fix some known bugs.",
+        "🐛 [问题] 修复了一些已知问题。"
+      ]
+    },
+    "2.2.3": {
+      "date": "2025-09-21",
+      "notes": [
+        "🐛 [BugFix] Fix some known bugs.",
+        "🐛 [问题] 修复了一些已知问题。"
+      ]
+    },
+    "2.2.2": {
+      "date": "2025-09-11",
+      "notes": [
+        "🆕 [Feature] Support copying images as Base64 text",
+        "🆕 [新特性] 支持复制图片为 Base64 文本。",
+        "🐛 [BugFix] Fix some known bugs.",
+        "🐛 [问题] 修复了一些已知问题。"
+      ]
+    },
+    "2.2.1": {
+      "date": "2025-09-09",
+      "notes": [
+        "🚀 [Improvement] Optimize the implementation of the function for adding text/image watermarks",
+        "🐛 [BugFix] Fix some known bugs.",
+        "🚀 [优化] 优化了添加文字/图片水印的实现方式，提升了性能和稳定性。",
+        "🐛 [问题] 修复了一些已知问题。"
+      ]
+    },
+    "2.2.0": {
+      "date": "2025-09-09",
+      "notes": [
+        "🆕 [Feature] Support adding text or image watermarks after compression",
+        "🆕 [新特性] 支持在压缩后添加文字或图片水印。"
+      ]
+    },
+    "2.1.0": {
+      "date": "2025-09-05",
+      "notes": [
+        "🆕 [Feature] Supports resizing images during compression",
+        "🆕 [新特性] 支持在压缩时调整图片尺寸"
+      ]
+    },
+    "2.0.1": {
+      "date": "2025-09-04",
+      "notes": [
+        "🛠️ [Modify] In file listening mode, the listening connection will remain active all the time unless it is manually closed."
+      ]
+    },
+    "2.0.0": {
+      "date": "2025-09-03",
+      "notes": [
+        "🚀 [Improvement] Provides better support for PNG/APNG, TIF/TIFF lossless compression.",
+        "🚀 [Improvement] Brand new UI interface, get the best experience on MacOS, Windows, and Linux.",
+        "🚀 [Improvement] Improve system stability and multitasking performance.",
+        "🚀 [Improvement] Enhance application interaction.",
+        "💡 [Feature] Provide auto-start configuration upon startup.",
+        "💡 [Feature] In \"File Monitoring\" mode, support for configuring \"Ignore Files\".",
+        "🐛 [BugFix] Fix some known bugs."
+      ]
+    },
+    "1.5.1": {
+      "date": "2025-07-17",
+      "notes": [
+        "🚀 Switch the \"[dirspy](https://github.com/AkiraBit/dirspy)\" library to implement the file monitoring function to enhance stability and reduce resource usage."
+      ]
+    },
+    "1.5.0": {
+      "date": "2025-07-09",
+      "notes": [
+        "⚙️ Refactor \"Watch & Auto-Compress\", enhance stability and fault tolerance under different operating systems.",
+        "🐛 Fix some known bugs."
+      ]
+    },
+    "1.4.0": {
+      "date": "2025-06-14",
+      "notes": [
+        "🆕 Support compressing images or directories from clipboard"
+      ]
+    },
+    "1.3.0": {
+      "date": "2025-06-10",
+      "notes": [
+        "🆕 Supports configuration of whether to retain all metadata of the original image (EXIF, ICC, XMP, IPTC)"
+      ]
+    },
+    "1.2.1": {
+      "date": "2025-06-09",
+      "notes": [
+        "🐛 Fixed the problem that some color blocks in compressed images may deviate from their original colors due to unreasonable control of the color quantization degree of the PNG encoder"
+      ]
+    },
+    "1.2.0": {
+      "date": "2025-06-08",
+      "notes": [
+        "🆕 Supports converting images to specified formats when compressing.",
+        "🚀 Optimize interactive experience.",
+        "🐛 Fix some known bugs."
+      ]
+    },
+    "1.1.6": {
+      "date": "2025-06-05",
+      "notes": [
+        "Fix the known problems."
+      ]
+    },
+    "1.1.5": {
+      "date": "2025-06-05",
+      "notes": [
+        "Fix the known problems.",
+        "Optimize the automatic update process of applications under the Windows system."
+      ]
+    },
+    "1.1.4": {
+      "date": "2025-06-05",
+      "notes": [
+        "Fix the known problems.",
+        "Optimize application interaction."
+      ]
+    },
+    "1.1.3": {
+      "date": "2025-06-04",
+      "notes": [
+        "Add undo operation after image compression.",
+        "Add application menu."
+      ]
+    },
+    "1.1.2": {
+      "date": "2025-06-02",
+      "notes": [
+        "Optimize file list parsing logic in app launch arguments across different operating systems.",
+        "Upgrade Sharp to 0.34.2 and resolve libvips cache race condition when overwriting input files on Windows"
+      ]
+    },
+    "1.1.1": {
+      "date": "2025-06-01",
+      "notes": [
+        "Fix: resolve file drag-and-drop to app icon not responding on Windows systems.",
+        "Fix: resolve resource path parsing issues on Windows systems"
+      ]
+    },
+    "1.1.0": {
+      "date": "2025-06-01",
+      "notes": [
+        "Add single instance mode support and optimize first-time config initialization.",
+        "Sync theme changes across multiple windows.",
+        "Sync settings changes across multiple windows and trigger updates.",
+        "Fix some bugs."
+      ]
+    },
+    "1.0.5": {
+      "date": "2025-05-25",
+      "notes": [
+        "Fix some bugs.",
+        "Add some common options to the system tray.",
+        "Optimize the relase workflow.",
+        "Add support for Windows and Linux (Ubuntu).",
+        "Optimize application interaction."
+      ]
+    },
+    "1.0.4": {
+      "date": "2025-05-22",
+      "notes": [
+        "Optimize UI interaction",
+        "Fix some bugs"
+      ]
+    },
+    "1.0.3": {
+      "date": "2025-05-19",
+      "notes": [
+        "Update UI components and add feedback page"
+      ]
+    },
+    "1.0.2": {
+      "date": "2025-05-17",
+      "notes": [
+        "Update release test"
+      ]
+    },
+    "1.0.1": {
+      "date": "2025-05-17",
+      "notes": [
+        "Update release test"
+      ]
+    },
+    "1.0.0": {
+      "date": "2025-05-17",
+      "notes": [
+        "First release"
+      ]
+    }
+  }
+}
