@@ -43,6 +43,8 @@ function ToolbarCompress() {
     [SettingsKey.CompressionOutputSaveAsFileSuffix]: saveAsFileSuffix,
     [SettingsKey.CompressionThresholdEnable]: thresholdEnable,
     [SettingsKey.CompressionThresholdValue]: thresholdValue,
+    [SettingsKey.CompressionSizeFilterEnable]: sizeFilterEnable,
+    [SettingsKey.CompressionSizeFilterValue]: sizeFilterValue,
     [SettingsKey.CompressionConvertEnable]: convertEnable,
     [SettingsKey.CompressionType]: compressionType,
     [SettingsKey.CompressionLevel]: compressionLevel,
@@ -69,6 +71,8 @@ function ToolbarCompress() {
       SettingsKey.CompressionOutputSaveAsFileSuffix,
       SettingsKey.CompressionThresholdEnable,
       SettingsKey.CompressionThresholdValue,
+      SettingsKey.CompressionSizeFilterEnable,
+      SettingsKey.CompressionSizeFilterValue,
       SettingsKey.CompressionConvertEnable,
       SettingsKey.CompressionType,
       SettingsKey.CompressionLevel,
@@ -166,6 +170,7 @@ function ToolbarCompress() {
       }
 
       setInCompressing(true);
+      const sizeFilterBytes = sizeFilterEnable ? sizeFilterValue * 1024 : 0;
       const files = selectedFiles
         .map<FileInfo>((id) => {
           const file = fileMap.get(id);
@@ -173,13 +178,28 @@ function ToolbarCompress() {
             file &&
             (file.status === ICompressor.Status.Pending ||
               file.status === ICompressor.Status.Failed ||
-              file.status === ICompressor.Status.Undone)
+              file.status === ICompressor.Status.Undone ||
+              file.status === ICompressor.Status.Skipped)
           ) {
+            if (sizeFilterBytes > 0 && file.bytesSize < sizeFilterBytes) {
+              file.status = ICompressor.Status.Skipped;
+              eventEmitter.emit('update_file_item', file.path);
+              return null;
+            }
             file.status = ICompressor.Status.Processing;
             return file;
           }
         })
         .filter(Boolean);
+
+      if (files.length === 0) {
+        setInCompressing(false);
+        const skipped = selectedFiles.length;
+        messageApi?.info(
+          t('compression.options.size_filter.all_skipped', { count: skipped }),
+        );
+        return;
+      }
 
       eventEmitter.emit('update_file_item', 'all');
       await new Compressor({

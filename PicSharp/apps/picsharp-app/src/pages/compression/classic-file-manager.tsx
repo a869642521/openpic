@@ -6,6 +6,7 @@ import Toolbar from './toolbar';
 import ToolbarPagination from './toolbar-pagination';
 import { Empty } from 'antd';
 import { isValidArray, preventDefault } from '@/utils';
+import CompressionOptionsCard from './compression-options-card';
 import { useNavigate } from '@/hooks/useNavigate';
 import { useI18n } from '@/i18n';
 import { ScrollArea, ScrollAreaRef } from '@/components/ui/scroll-area';
@@ -55,17 +56,23 @@ function FileManager() {
   const hasPagination = files.length > pageSize;
 
   return (
-    <ScrollArea
-      className='relative h-full min-w-[350px]'
-      onContextMenu={preventDefault}
-      ref={scrollAreaRef}
-    >
-      {isValidArray(dataList) ? (
-        <div className={cn('w-full px-3 pt-1', hasPagination ? 'pb-[110px]' : 'pb-[65px]')}>
+    <div className='flex h-full gap-3' style={{ backgroundColor: 'rgb(236, 237, 238)' }}>
+      <ScrollArea
+        className='relative min-h-0 min-w-[350px] flex-1 overflow-hidden rounded-xl'
+        style={{ backgroundColor: 'rgb(252, 252, 252)' }}
+        onContextMenu={preventDefault}
+        ref={scrollAreaRef}
+      >
+        {isValidArray(dataList) ? (
+        <div
+          className={cn('w-full px-3', hasPagination ? 'pb-[110px]' : 'pb-[65px]')}
+          style={{ paddingTop: '0.75rem' }}
+        >
           <div
-            className='grid grid-cols-2 gap-3 contain-layout sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7'
+            className='grid gap-3 contain-layout pb-[40px]'
             style={{
               contentVisibility: 'auto',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
             }}
           >
             {dataList.map((file) => (
@@ -97,6 +104,16 @@ function FileManager() {
         <Toolbar mode='classic' />
       </div>
     </ScrollArea>
+      {isValidArray(files) && (
+        <div className='flex min-w-0 flex-shrink-0 flex-col p-0'>
+          <ScrollArea className='h-full min-h-0'>
+            <div className='flex min-h-full flex-col justify-end gap-3 pb-2'>
+              <CompressionOptionsCard />
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+    </div>
   );
 }
 

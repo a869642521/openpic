@@ -30,6 +30,8 @@ export enum SettingsKey {
   Concurrency = 'concurrency',
   CompressionThresholdEnable = 'compression_threshold_enable',
   CompressionThresholdValue = 'compression_threshold_value',
+  CompressionSizeFilterEnable = 'compression_size_filter_enable',
+  CompressionSizeFilterValue = 'compression_size_filter_value',
   CompressionOutput = 'compression_output',
   CompressionOutputSaveAsFileSuffix = 'compression_output_save_as_file_suffix',
   CompressionOutputSaveToFolder = 'compression_output_save_to_folder',

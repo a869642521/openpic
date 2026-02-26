@@ -34,6 +34,8 @@ interface SettingsState {
   [SettingsKey.Concurrency]: number;
   [SettingsKey.CompressionThresholdEnable]: boolean;
   [SettingsKey.CompressionThresholdValue]: number;
+  [SettingsKey.CompressionSizeFilterEnable]: boolean;
+  [SettingsKey.CompressionSizeFilterValue]: number;
   [SettingsKey.CompressionOutput]: CompressionOutputMode;
   [SettingsKey.CompressionOutputSaveAsFileSuffix]: string;
   [SettingsKey.CompressionOutputSaveToFolder]: string;
@@ -87,6 +89,8 @@ const useSettingsStore = create(
       [SettingsKey.Concurrency]: 6,
       [SettingsKey.CompressionThresholdEnable]: false,
       [SettingsKey.CompressionThresholdValue]: 0.1,
+      [SettingsKey.CompressionSizeFilterEnable]: false,
+      [SettingsKey.CompressionSizeFilterValue]: 500,
       [SettingsKey.CompressionOutput]: CompressionOutputMode.Overwrite,
       [SettingsKey.CompressionOutputSaveAsFileSuffix]: '_min',
       [SettingsKey.CompressionOutputSaveToFolder]: '',

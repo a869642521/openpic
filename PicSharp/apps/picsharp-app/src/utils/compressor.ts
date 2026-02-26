@@ -54,6 +54,8 @@ export namespace ICompressor {
     Failed = 'failed',
     // 已撤销
     Undone = 'undone',
+    // 被过滤跳过
+    Skipped = 'skipped',
   }
 
   export interface ResultItem {

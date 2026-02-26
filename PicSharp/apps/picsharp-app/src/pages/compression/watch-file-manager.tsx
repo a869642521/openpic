@@ -44,11 +44,12 @@ function WatchFileManager() {
       ref={scrollAreaRef}
     >
       {isValidArray(dataList) ? (
-        <div className={cn('w-full px-3 pt-1', hasPagination ? 'pb-[110px]' : 'pb-[65px]')}>
+        <div className={cn('w-full px-3 pt-3', hasPagination ? 'pb-[110px]' : 'pb-[65px]')}>
           <div
-            className='grid grid-cols-2 gap-3 contain-layout sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7'
+            className='grid gap-3 contain-layout pb-[40px]'
             style={{
               contentVisibility: 'auto',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
             }}
           >
             {dataList.map((file) => (

@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useContext } from 'react';
+import { memo, useEffect, useRef, useContext, useState } from 'react';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';
@@ -7,15 +7,17 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useI18n } from '@/i18n';
 import { useUpdate } from 'ahooks';
-import { exists } from '@tauri-apps/plugin-fs';
+import { copyFile, exists, rename } from '@tauri-apps/plugin-fs';
+import { dirname, join } from '@tauri-apps/api/path';
 import { getOSPlatform, isValidArray } from '@/utils';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
-import { RefreshCw, Ellipsis } from 'lucide-react';
+import { RefreshCw, Download, FolderOpen, Trash2 } from 'lucide-react';
 import { calImageWindowSize, spawnWindow, createWebviewWindow } from '@/utils/window';
 import { WebviewWindow, getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { ICompressor } from '@/utils/compressor';
 import { undoSave } from '@/utils/fs';
+import { save } from '@tauri-apps/plugin-dialog';
 import { Divider, Tooltip } from 'antd';
 import { AppContext } from '@/routes';
 import {
@@ -28,6 +30,7 @@ import useAppStore from '@/store/app';
 import { copyImage } from '@/utils/clipboard';
 import ImgTag from '@/components/img-tag';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 export interface FileCardProps {
   path: FileInfo['path'];
 }
@@ -39,6 +42,9 @@ function FileCard(props: FileCardProps) {
   const { eventEmitter, fileMap } = useCompressionStore(useSelector(['eventEmitter', 'fileMap']));
   const file = fileMap.get(path);
   const imgRef = useRef<ImageViewerRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
   const { messageApi } = useContext(AppContext);
   const { sidecar } = useAppStore(useSelector(['sidecar']));
 
@@ -49,6 +55,70 @@ function FileCard(props: FileCardProps) {
     } else {
       messageApi?.error(t('tips.file_not_exists'));
     }
+  };
+
+  const handleSaveAs = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const srcPath = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    if (!(await exists(srcPath))) {
+      messageApi?.error(t('tips.file_not_exists'));
+      return;
+    }
+    const ext = file.ext?.toLowerCase() || 'png';
+    const selectedPath = await save({
+      defaultPath: file.name,
+      filters: [{ name: ext, extensions: [ext] }],
+    });
+    if (selectedPath) {
+      try {
+        await copyFile(srcPath, selectedPath);
+        messageApi?.success(t('saved'));
+      } catch (err) {
+        messageApi?.error(t('export_failed'));
+      }
+    }
+  };
+
+  const handleRevealInDir = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const srcPath = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    if (await exists(srcPath)) {
+      revealItemInDir(srcPath);
+    } else {
+      messageApi?.error(t('tips.file_not_exists'));
+    }
+  };
+
+  const handleRemoveFromList = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    useCompressionStore.getState().removeFile(path);
+    useCompressionStore.getState().eventEmitter.emit('update_file_item', 'all');
+  };
+
+  const handleTitleClick = () => {
+    setEditName(file.name);
+    setIsEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleRenameSave = async () => {
+    if (!editName.trim() || editName === file.name) {
+      setIsEditing(false);
+      return;
+    }
+    const srcPath =
+      file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    const dir = await dirname(srcPath);
+    const newPath = await join(dir, editName.trim());
+    try {
+      await rename(srcPath, newPath);
+      useCompressionStore.getState().updateFilePath(path, newPath, editName.trim());
+      useCompressionStore.getState().eventEmitter.emit('update_file_item', 'all');
+      messageApi?.success(t('saved'));
+    } catch (err) {
+      messageApi?.error(t('export_failed'));
+    }
+    setIsEditing(false);
   };
 
   const fileContextMenuHandler = async (event: React.MouseEvent<HTMLElement>) => {
@@ -279,43 +349,94 @@ function FileCard(props: FileCardProps) {
   if (!file) return null;
 
   return (
-    <div
-      className='bg-background group relative rounded-lg transition-all duration-300 hover:shadow-lg'
-      onContextMenu={fileContextMenuHandler}
-    >
+    <div className='group relative' onContextMenu={fileContextMenuHandler}>
       <div
-        className='text-0 relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md'
-        style={{ backgroundColor: 'rgb(243, 244, 248)' }}
+        className='bg-background overflow-hidden rounded-lg transition-all duration-300'
       >
-        <div className='absolute left-2 top-2 z-10'>
-          <ImgTag type={file.ext} />
-        </div>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-sm opacity-0 transition-all duration-300 group-hover:bg-neutral-200/30 group-hover:opacity-100 dark:group-hover:bg-neutral-600/70'
-          onClick={fileContextMenuHandler}
+        <div
+          className='text-0 relative flex aspect-[4/3] items-center justify-center overflow-hidden'
+          style={{ backgroundColor: 'rgb(243, 244, 248)' }}
         >
-          <Ellipsis className='h-4 w-4' />
-        </Button>
-        <ImageViewer
-          src={file.assetPath}
-          size={
-            file.status === ICompressor.Status.Completed ? file.compressedBytesSize : file.bytesSize
-          }
-          path={file.status === ICompressor.Status.Completed ? file.outputPath : file.path}
-          ext={file.ext}
-          ref={imgRef}
-          imgClassName='aspect-[4/3]'
-        />
-      </div>
-      <div className='px-1 pb-1'>
-        <Tooltip title={file.path} arrow={false}>
-          <div className='text-foreground max-w-[100%] overflow-hidden text-ellipsis whitespace-nowrap font-normal'
-               style={{ fontSize: '16px' }}>
-            {file.name}
+          <div className='absolute left-2 top-2 z-10 flex items-start'>
+            <ImgTag type={file.ext} />
           </div>
-        </Tooltip>
+          <div className='absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100'>
+            <Tooltip title={t('compression.file_action.save_as')}>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
+                onClick={handleSaveAs}
+              >
+                <Download className='h-4 w-4' />
+              </Button>
+            </Tooltip>
+            <Tooltip
+              title={
+                getOSPlatform() === 'macos'
+                  ? t('compression.file_action.reveal_in_finder')
+                  : t('compression.file_action.reveal_in_exploer')
+              }
+            >
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
+                onClick={handleRevealInDir}
+              >
+                <FolderOpen className='h-4 w-4' />
+              </Button>
+            </Tooltip>
+            <Tooltip title={t('compression.file_action.delete_in_list')}>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
+                onClick={handleRemoveFromList}
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            </Tooltip>
+          </div>
+          <ImageViewer
+            src={file.assetPath}
+            size={
+              file.status === ICompressor.Status.Completed ? file.compressedBytesSize : file.bytesSize
+            }
+            path={file.status === ICompressor.Status.Completed ? file.outputPath : file.path}
+            ext={file.ext}
+            ref={imgRef}
+            imgClassName='aspect-[4/3] rounded-lg'
+          />
+        </div>
+        <div className='p-2' style={{ backgroundColor: 'rgb(252, 252, 252)' }}>
+        {isEditing ? (
+          <Input
+            ref={inputRef}
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={handleRenameSave}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameSave();
+              if (e.key === 'Escape') {
+                setEditName(file.name);
+                setIsEditing(false);
+              }
+            }}
+            className='h-6 px-2 text-[12px]'
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <Tooltip title={`${file.path}\n${t('compression.file_action.rename')}`} arrow={false}>
+            <div
+              className='text-foreground max-w-[100%] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap font-normal hover:underline'
+              style={{ fontSize: '12px' }}
+              onClick={handleTitleClick}
+            >
+              {file.name}
+            </div>
+          </Tooltip>
+        )}
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-1'>
             <Tooltip
@@ -387,6 +508,7 @@ function FileCard(props: FileCardProps) {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );
@@ -421,6 +543,11 @@ const StatusBadge = ({ status, errorMessage }: Pick<FileInfo, 'status' | 'errorM
         <Badge variant='minor' className={className}>
           {t('undo.undone')}
         </Badge>
+      )}
+      {status === ICompressor.Status.Skipped && (
+        <span className={className} style={{ color: 'rgb(11, 137, 255)' }}>
+          {t('compression.options.mode.filter')}
+        </span>
       )}
     </div>
   );

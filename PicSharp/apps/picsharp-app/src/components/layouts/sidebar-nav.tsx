@@ -71,7 +71,7 @@ export default function SidebarNav() {
                     'h-[60px] w-full justify-start gap-2 px-3 text-foreground shadow-none',
                     location.pathname.startsWith('/settings')
                       ? 'hover:opacity-90'
-                      : 'hover:bg-neutral-200/50',
+                      : 'hover:bg-[rgba(252,252,252,0.5)]',
                   )}
                   style={
                     location.pathname.startsWith('/settings')
@@ -109,7 +109,7 @@ const NavItem = function NavItem({
         variant={isActive ? 'secondary' : 'ghost'}
         className={cn(
           'h-[60px] w-full justify-start gap-2 rounded-xl px-3 text-sm text-foreground shadow-none',
-          !isActive && 'hover:bg-neutral-200/50',
+          !isActive && 'hover:bg-[rgba(252,252,252,0.5)]',
           className,
         )}
         style={isActive ? { backgroundColor: 'rgb(252, 252, 252)', boxShadow: 'none' } : undefined}

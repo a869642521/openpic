@@ -103,6 +103,18 @@ const enUS = {
   'settings.compression.output.option.save_to_new_folder.description':
     'Specify the folder for storing compressed images, default to the system download folder.',
   'settings.compression.output.option.save_to_new_folder.choose': 'Choose Folder',
+  'compression.options.title': 'Compression Options',
+  'compression.options.mode.auto': 'Auto',
+  'compression.options.mode.filter': 'Filter',
+  'compression.options.compression_type': 'Compression Type',
+  'compression.options.size_filter.title': 'Image Filter',
+  'compression.options.size_filter.label': 'Filter smaller than',
+  'compression.options.size_filter.description': 'Skip compressing images smaller than this size',
+  'compression.options.save_mode.title': 'Save Mode',
+  'compression.options.save_mode.overwrite': 'Overwrite',
+  'compression.options.save_mode.specify': 'Specify',
+  'compression.options.save_mode.overwrite_hint': 'Original images will be overwritten after compression',
+  'compression.options.size_filter.all_skipped': 'All {{count}} images are smaller than the filter threshold, skipped',
   //Settings.Compression.Threshold
   'settings.compression.threshold.title': 'Compression Rate Limit',
   'settings.compression.threshold.description':
@@ -314,6 +326,8 @@ const enUS = {
   'compression.file_action.copy_as_markdown': 'Markdown Code',
   'compression.file_action.copy_as_base64': 'Base64 Text',
   'compression.file_action.undo': 'Undo',
+  'compression.file_action.save_as': 'Save As',
+  'compression.file_action.rename': 'Click to rename',
   'compression.file_action.delete_in_list': 'Remove from Current List',
   'compression.toolbar.info.total_files': 'Total',
   'compression.toolbar.info.files_size': 'Storage Space',
