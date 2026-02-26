@@ -115,6 +115,8 @@ const enUS = {
   'compression.options.save_mode.specify': 'Specify',
   'compression.options.save_mode.overwrite_hint': 'Original images will be overwritten after compression',
   'compression.options.size_filter.all_skipped': 'All {{count}} images are smaller than the filter threshold, skipped',
+  'compression.options.common_hints.title': 'My common compression sizes',
+  'compression.options.common_hints.placeholder': 'e.g. 500KB, 80%',
   //Settings.Compression.Threshold
   'settings.compression.threshold.title': 'Compression Rate Limit',
   'settings.compression.threshold.description':

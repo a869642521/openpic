@@ -112,6 +112,8 @@ export default {
   'compression.options.save_mode.specify': '指定',
   'compression.options.save_mode.overwrite_hint': '压缩完成后会将原图片进行覆盖',
   'compression.options.size_filter.all_skipped': '所有图片均小于过滤阈值，已跳过 {{count}} 张',
+  'compression.options.common_hints.title': '我常用的压缩大小',
+  'compression.options.common_hints.placeholder': '输入压缩要求，如 500KB、80% 等',
   //Settings.Compression.Threshold
   'settings.compression.threshold.title': '压缩率限制',
   'settings.compression.threshold.description': '当图片压缩率低于设置阈值时，不进行保存',

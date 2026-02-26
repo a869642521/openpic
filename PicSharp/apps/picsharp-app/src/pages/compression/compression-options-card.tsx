@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useI18n } from '@/i18n';
 import useSettingsStore from '@/store/settings';
 import useSelector from '@/hooks/useSelector';
@@ -15,19 +15,37 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { exists } from '@tauri-apps/plugin-fs';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { downloadDir } from '@tauri-apps/api/path';
 import { useAsyncEffect } from 'ahooks';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 
 const cardClassName = 'w-[280px] flex-shrink-0 border-0 shadow-none rounded-xl';
 const cardStyle = { backgroundColor: 'rgb(252, 252, 252)' };
 
 function CompressionOptionsCard() {
   const t = useI18n();
+  const [hintsExpanded, setHintsExpanded] = useState(false);
+  const [commonHints, setCommonHints] = useState(
+    '亚马逊平台：<500KB\n邮件：首图<300kb、其他<150kb',
+  );
+  const hintsRef = useRef<HTMLTextAreaElement>(null);
+
+  const resizeHints = () => {
+    const el = hintsRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (hintsExpanded) resizeHints();
+  }, [hintsExpanded, commonHints]);
   const {
     [SettingsKey.CompressionSizeFilterEnable]: sizeFilterEnable,
     [SettingsKey.CompressionSizeFilterValue]: sizeFilterValue,
@@ -47,6 +65,26 @@ function CompressionOptionsCard() {
       'set',
     ]),
   );
+
+  const [filterInput, setFilterInput] = useState(() => String(sizeFilterValue));
+  const [modeTab, setModeTab] = useState<'auto' | 'filter'>(() =>
+    sizeFilterEnable ? 'filter' : 'auto',
+  );
+  const [saveTab, setSaveTab] = useState<'overwrite' | 'specify'>(() =>
+    outputMode === CompressionOutputMode.Overwrite ? 'overwrite' : 'specify',
+  );
+
+  useEffect(() => {
+    setModeTab(sizeFilterEnable ? 'filter' : 'auto');
+  }, [sizeFilterEnable]);
+
+  useEffect(() => {
+    setFilterInput(String(sizeFilterValue));
+  }, [sizeFilterValue]);
+
+  useEffect(() => {
+    setSaveTab(outputMode === CompressionOutputMode.Overwrite ? 'overwrite' : 'specify');
+  }, [outputMode]);
 
   useAsyncEffect(async () => {
     if (
@@ -72,9 +110,13 @@ function CompressionOptionsCard() {
     <div className='flex flex-col gap-3'>
       <Card className={cardClassName} style={cardStyle}>
         <Tabs
-          value={sizeFilterEnable ? 'filter' : 'auto'}
+          value={modeTab}
+          activationMode='manual'
           onValueChange={(v) => {
-            const isFilter = v === 'filter';
+            const next = v as 'auto' | 'filter';
+            if (next === modeTab) return;
+            setModeTab(next);
+            const isFilter = next === 'filter';
             set(SettingsKey.CompressionSizeFilterEnable, isFilter);
             if (!isFilter) {
               set(SettingsKey.CompressionType, CompressionType.Lossless);
@@ -163,10 +205,16 @@ function CompressionOptionsCard() {
                   <Input
                     type='number'
                     min={1}
-                    value={sizeFilterValue}
-                    onChange={(e) =>
-                      set(SettingsKey.CompressionSizeFilterValue, Number(e.target.value) || 500)
-                    }
+                    value={filterInput}
+                    placeholder='500'
+                    onChange={(e) => setFilterInput(e.target.value)}
+                    onBlur={() => {
+                      const num = Number(filterInput);
+                      const valid = Number.isFinite(num) && num >= 1;
+                      const final = valid ? Math.floor(num) : 500;
+                      set(SettingsKey.CompressionSizeFilterValue, final);
+                      setFilterInput(String(final));
+                    }}
                     className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
                   />
                   <span className='shrink-0 text-xs text-neutral-500'>KB</span>
@@ -175,17 +223,56 @@ function CompressionOptionsCard() {
             </TabsContent>
         </CardContent>
           </Tabs>
+        <div className='px-6 pb-4 pt-0'>
+          <div
+            className='flex w-full flex-col overflow-hidden rounded-md'
+            style={{ backgroundColor: 'rgb(243, 244, 248)' }}
+          >
+            <button
+              type='button'
+              className='flex h-[30px] shrink-0 items-center justify-between pl-3 pr-3 text-left'
+              onClick={() => setHintsExpanded(!hintsExpanded)}
+            >
+              <span className='text-xs font-normal'>{t('compression.options.common_hints.title')}</span>
+              {hintsExpanded ? (
+                <ChevronUp className='h-4 w-4 shrink-0' />
+              ) : (
+                <ChevronDown className='h-4 w-4 shrink-0' />
+              )}
+            </button>
+            {hintsExpanded && (
+              <div
+                className='p-0'
+                style={{ borderTop: '1px dashed rgb(219, 219, 220)' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Textarea
+                  ref={hintsRef}
+                  value={commonHints}
+                  onChange={(e) => setCommonHints(e.target.value)}
+                  placeholder={t('compression.options.common_hints.placeholder')}
+                  className='min-h-[60px] w-full overflow-hidden border-0 bg-transparent shadow-none focus-visible:ring-0'
+                  style={{ resize: 'none', fontSize: 12, lineHeight: '200%' }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </Card>
 
       <Card className={cardClassName} style={cardStyle}>
         <Tabs
-          value={outputMode === CompressionOutputMode.Overwrite ? 'overwrite' : 'specify'}
-          onValueChange={(v) =>
+          value={saveTab}
+          activationMode='manual'
+          onValueChange={(v) => {
+            const next = v as 'overwrite' | 'specify';
+            if (next === saveTab) return;
+            setSaveTab(next);
             set(
               SettingsKey.CompressionOutput,
-              v === 'overwrite' ? CompressionOutputMode.Overwrite : CompressionOutputMode.SaveToNewFolder,
-            )
-          }
+              next === 'overwrite' ? CompressionOutputMode.Overwrite : CompressionOutputMode.SaveToNewFolder,
+            );
+          }}
         >
           <CardHeader
             className='flex flex-row items-center justify-between pb-4 pt-4'
