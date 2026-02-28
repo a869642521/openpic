@@ -1,34 +1,52 @@
 import { memo } from 'react';
+import { cn } from '@/lib/utils';
 import ToolbarCompress from './toolbar-compress';
-import { Separator } from '@/components/ui/separator';
-import ToolbarReset from './toolbar-exit';
+import ToolbarClear from './toolbar-exit';
 import ToolbarInfo from './toolbar-info';
+import { Separator } from '@/components/ui/separator';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { TooltipProvider } from '@/components/ui/tooltip';
+
 export interface ToolbarProps {
   mode: 'classic' | 'watch';
 }
 
 function Toolbar(props: ToolbarProps) {
   const { mode } = props;
+  const isMain = getCurrentWebviewWindow().label === 'main';
+
   return (
     <TooltipProvider delayDuration={100}>
-      <div className='mx-auto max-w-sm rounded-xl border bg-background px-2 py-1 shadow-lg dark:border-neutral-600 dark:bg-neutral-800'>
-        <div className='flex items-center justify-center gap-2'>
-          <ToolbarInfo />
-          {mode === 'classic' && (
-            <>
-              <Separator orientation='vertical' />
+      <div
+        className={cn(
+          'flex h-[56px] w-full items-stretch overflow-hidden rounded-xl',
+          'border border-neutral-200/80 bg-white',
+          'dark:border-neutral-600/80 dark:bg-neutral-800',
+        )}
+      >
+        {mode === 'watch' && (
+          <div className='flex min-w-0 flex-1 items-center justify-center gap-2 px-3'>
+            <ToolbarInfo />
+            {isMain && (
+              <>
+                <Separator orientation='vertical' className='h-6' />
+                <ToolbarClear mode={mode} />
+              </>
+            )}
+          </div>
+        )}
+        {mode === 'classic' && (
+          <>
+            {isMain && (
+              <div className='flex min-w-0 flex-[0.3] border-r border-neutral-200/60 dark:border-neutral-600/60 [&>button]:flex-1'>
+                <ToolbarClear mode={mode} variant='button' />
+              </div>
+            )}
+            <div className={cn('flex min-w-0', isMain ? 'flex-[0.7]' : 'flex-1', '[&>button]:flex-1')}>
               <ToolbarCompress />
-            </>
-          )}
-          {getCurrentWebviewWindow().label === 'main' && (
-            <>
-              <Separator orientation='vertical' />
-              <ToolbarReset mode={mode} />
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </TooltipProvider>
   );

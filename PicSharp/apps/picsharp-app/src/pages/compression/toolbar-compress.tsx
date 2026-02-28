@@ -338,7 +338,12 @@ function ToolbarCompress() {
   };
 
   return (
-    <Button size='sm' disabled={disabledCompress} onClick={handleCompress} className='relative'>
+    <Button
+      size='sm'
+      disabled={disabledCompress}
+      onClick={handleCompress}
+      className='relative h-full min-h-0 w-full flex-1 rounded-none border-0 bg-blue-600 px-4 text-white transition-colors hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-0 disabled:opacity-50 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700'
+    >
       <div
         className={cn(
           'absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity duration-300',

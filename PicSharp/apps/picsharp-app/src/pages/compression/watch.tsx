@@ -2,6 +2,7 @@ import { useEffect, useRef, useContext } from 'react';
 import { debounce } from 'radash';
 import useCompressionStore from '@/store/compression';
 import WatchFileManager from './watch-file-manager';
+import WatchFolderCard from './watch-folder-card';
 import { parsePaths, humanSize } from '@/utils/fs';
 import { VALID_IMAGE_EXTS } from '@/constants';
 import { isValidArray, correctFloat } from '@/utils';
@@ -200,14 +201,13 @@ function CompressionWatch() {
       parsePaths(queueRef.current, VALID_IMAGE_EXTS)
         .then((candidates) => {
           if (isValidArray(candidates)) {
-            const { files, setFiles } = useCompressionStore.getState();
-            setFiles([
-              ...files,
-              ...candidates.map((item) => ({
+            const { appendWatchFiles } = useCompressionStore.getState();
+            appendWatchFiles(
+              candidates.map((item) => ({
                 ...item,
                 status: ICompressor.Status.Processing,
               })),
-            ]);
+            );
             handleCompress(candidates);
           }
         })
@@ -227,9 +227,9 @@ function CompressionWatch() {
   };
 
   function regain() {
-    const { reset } = useCompressionStore.getState();
+    const { resetWatchOnly } = useCompressionStore.getState();
     ctrlRef.current?.abort();
-    reset();
+    resetWatchOnly();
     navigate('/compression/watch/guide');
     progressRef.current?.done();
   }
@@ -332,6 +332,20 @@ function CompressionWatch() {
       return;
     }
     handleWatch();
+
+    // 目录扫描：获取目录内图片总数与总大小，与 EventSource 并行执行
+    parsePaths([watchingFolder], VALID_IMAGE_EXTS)
+      .then((files) => {
+        const { setWatchFolderStats } = useCompressionStore.getState();
+        const totalCount = files.length;
+        const totalBytes = files.reduce((s, f) => s + (f.bytesSize || 0), 0);
+        setWatchFolderStats({ totalCount, totalBytes });
+      })
+      .catch((error) => {
+        captureError(error);
+        useCompressionStore.getState().setWatchFolderStats({ failed: true });
+      });
+
     window.addEventListener('visibilitychange', handlePageVisible);
     return () => {
       ctrl.abort();
@@ -348,8 +362,11 @@ function CompressionWatch() {
   }, []);
 
   return (
-    <div className='h-full'>
-      <WatchFileManager />
+    <div className='flex h-full flex-col gap-4'>
+      <WatchFolderCard />
+      <div className='min-h-0 flex-1'>
+        <WatchFileManager />
+      </div>
     </div>
   );
 }

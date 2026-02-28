@@ -349,9 +349,13 @@ function FileCard(props: FileCardProps) {
   if (!file) return null;
 
   return (
-    <div className='group relative' onContextMenu={fileContextMenuHandler}>
+    <div
+      className='group relative rounded-lg transition-shadow hover:shadow-md'
+      style={{ backgroundColor: 'rgb(252, 252, 252)', border: '1px solid rgb(219, 219, 220)' }}
+      onContextMenu={fileContextMenuHandler}
+    >
       <div
-        className='bg-background overflow-hidden rounded-lg transition-all duration-300'
+        className='overflow-hidden rounded-lg transition-all duration-300'
       >
         <div
           className='text-0 relative flex aspect-[4/3] items-center justify-center overflow-hidden'

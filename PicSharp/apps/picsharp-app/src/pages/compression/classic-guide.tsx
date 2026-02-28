@@ -41,7 +41,7 @@ function ClassicCompressionGuide() {
       return;
     }
     useCompressionStore.getState().setWorking(true);
-    useCompressionStore.getState().setFiles(files);
+    useCompressionStore.getState().setClassicFiles(files);
     navigate('/compression/classic/workspace');
     setTimeout(() => {
       progressRef.current?.done();

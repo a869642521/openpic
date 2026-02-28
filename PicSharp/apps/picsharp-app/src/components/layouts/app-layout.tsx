@@ -51,15 +51,25 @@ export default function AppLayout() {
     async function process(mode: string, paths: string[]) {
       if (isValidArray(paths)) {
         progressRef.current?.show(true);
-        const { setWorking, setFiles, setWatchingFolder, reset } = useCompressionStore.getState();
+        const {
+          setWorking,
+          setClassicFiles,
+          setWatchFiles,
+          setWatchingFolder,
+          setMode,
+          reset,
+        } = useCompressionStore.getState();
         reset();
         if (mode === 'ns_compress') {
           const fileInfos = await parsePaths(paths, VALID_IMAGE_EXTS);
+          setMode('classic');
           setWorking(true);
-          setFiles(fileInfos);
+          setClassicFiles(fileInfos);
           navigate('/compression/classic/workspace');
         } else if (mode === 'ns_watch_and_compress') {
           await updateWatchHistory(paths[0]);
+          setMode('watch');
+          setWatchFiles([]);
           setWatchingFolder(paths[0]);
           setWorking(true);
           navigate('/compression/watch/workspace');

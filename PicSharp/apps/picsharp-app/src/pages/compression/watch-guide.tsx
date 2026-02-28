@@ -133,6 +133,7 @@ function WatchCompressionGuide() {
       const newHistory = await updateWatchHistory(path);
       setHistory(newHistory);
       progressRef.current?.show(true);
+      useCompressionStore.getState().setWatchFiles([]);
       setWorking(true);
       setWatchingFolder(path);
       navigate(`/compression/watch/workspace`);
@@ -205,60 +206,64 @@ function WatchCompressionGuide() {
       ref={dropzoneRef}
       className='group relative flex h-full flex-col items-center justify-center p-6'
     >
-      <div onClick={() => handleWatch()} className='cursor-pointer'>
-        <Folder />
-      </div>
-      <div className='relative z-10 mt-5 text-center'>
-        <p className='mx-auto max-w-2xl text-lg'>{t('page.compression.watch.guide.description')}</p>
-      </div>
-      <div className='relative z-10 mt-5 w-full max-w-5xl'>
+      <div className='relative z-10 flex w-full max-w-2xl flex-col items-center'>
         {isValidArray(history) ? (
-          <div className='mx-auto max-w-xl'>
-            <div className='mb-2 flex items-center justify-between gap-2 text-sm text-neutral-500'>
-              <div className='flex items-center gap-2'>
-                <FolderClock size={18} />
+          <>
+            <div className='mb-4 flex w-full items-center justify-between'>
+              <p className='text-base font-medium text-neutral-700 dark:text-neutral-300'>
                 {t('page.compression.watch.guide.history')} ({history.length})
-              </div>
+              </p>
               <Button
-                variant='ghost'
+                variant='default'
                 size='sm'
-                className='cursor-pointer text-neutral-400'
+                className='cursor-pointer'
                 onClick={() => handleWatch()}
               >
                 <Plus size={18} />
-                {t('page.compression.watch.guide.open_folder')}
+                {t('page.compression.watch.guide.add_folder')}
               </Button>
             </div>
-            <ScrollArea className='h-[220px] rounded-md border border-neutral-200 dark:border-neutral-800'>
-              <ul className='max-w-xl divide-y divide-neutral-200 dark:divide-neutral-800'>
+            <ScrollArea className='h-[220px] w-full rounded-xl border border-neutral-200 dark:border-neutral-800'>
+              <ul className='divide-y divide-neutral-200 dark:divide-neutral-800'>
                 {history.map((item) => (
                   <li
                     key={item.path}
-                    className='flex cursor-pointer items-center justify-between gap-4 px-4 py-2 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                    className='flex cursor-pointer items-center justify-between gap-4 px-4 py-3 text-sm transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
                     data-path={item.path}
                     title={item.path}
                     onClick={() => handleHistorySelect(item.path)}
                   >
-                    <span className='max-w-[50%] truncate font-medium'>{item.name}</span>
-                    <div className='flex max-w-[50%] items-center gap-1'>
-                      <span className='flex-1 truncate text-neutral-400'>{item.path}</span>
+                    <div className='flex items-center gap-2'>
+                      <FolderClock size={18} className='shrink-0 text-amber-500 dark:text-amber-400' />
+                      <span className='max-w-[40%] truncate font-medium'>{item.name}</span>
                     </div>
+                    <span className='max-w-[55%] truncate text-neutral-400'>{item.path}</span>
                   </li>
                 ))}
               </ul>
             </ScrollArea>
-          </div>
+          </>
         ) : (
-          <div className='flex w-full items-center justify-center'>
+          <>
+            <div onClick={() => handleWatch()} className='cursor-pointer'>
+              <Folder />
+            </div>
+            <p className='mt-5 text-center text-lg font-medium text-neutral-800 dark:text-neutral-200'>
+              {t('page.compression.watch.guide.empty_title')}
+            </p>
+            <p className='mt-2 max-w-md text-center text-sm text-neutral-500 dark:text-neutral-400'>
+              {t('page.compression.watch.guide.empty_description')}
+            </p>
             <Button
-              variant='secondary'
-              className='cursor-pointer text-neutral-400'
+              variant='default'
+              size='lg'
+              className='mt-6 cursor-pointer'
               onClick={() => handleWatch()}
             >
-              <Plus size={18} className='cursor-pointer' />
-              {t('page.compression.watch.guide.open_folder')}
+              <Plus size={20} />
+              {t('page.compression.watch.guide.add_folder')}
             </Button>
-          </div>
+          </>
         )}
       </div>
       <div className='absolute bottom-2 right-2' onClick={stopPropagation}>

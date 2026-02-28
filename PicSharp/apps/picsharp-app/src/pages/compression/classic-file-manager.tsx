@@ -3,6 +3,7 @@ import FileCard from './file-card';
 import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';
 import Toolbar from './toolbar';
+import { ToolbarInfoDisplay } from './toolbar-info';
 import ToolbarPagination from './toolbar-pagination';
 import { Empty } from 'antd';
 import { isValidArray, preventDefault } from '@/utils';
@@ -34,8 +35,8 @@ function FileManager() {
 
   useEffect(() => {
     const state = useCompressionStore.getState();
-    if (!isValidArray(state.files)) {
-      state.reset();
+    if (!isValidArray(state.classicFiles)) {
+      state.resetClassic();
       navigate('/compression/classic/guide');
     }
   }, []);
@@ -49,7 +50,7 @@ function FileManager() {
   useEffect(() => {
     const state = useCompressionStore.getState();
     r('classic_workspace_imp', {
-      files_num: state.files.length,
+      files_num: state.classicFiles.length,
     });
   }, []);
 
@@ -101,16 +102,24 @@ function FileManager() {
             }}
           />
         )}
-        <Toolbar mode='classic' />
       </div>
     </ScrollArea>
       {isValidArray(files) && (
-        <div className='flex min-w-0 flex-shrink-0 flex-col p-0'>
-          <ScrollArea className='h-full min-h-0'>
-            <div className='flex min-h-full flex-col justify-end gap-3 pb-2'>
+        <div className='flex min-w-0 flex-shrink-0 flex-col pb-0'>
+          <ScrollArea className='min-h-0 flex-1'>
+            <div className='flex flex-col gap-3 pb-2'>
               <CompressionOptionsCard />
             </div>
           </ScrollArea>
+          <div className='shrink-0 flex flex-col gap-2 pt-2'>
+            <div
+              className='rounded-xl border px-3 py-2 shadow-none dark:border-neutral-600 dark:bg-neutral-800'
+              style={{ backgroundColor: 'rgb(245, 245, 245)' }}
+            >
+              <ToolbarInfoDisplay />
+            </div>
+            <Toolbar mode='classic' />
+          </div>
         </div>
       )}
     </div>

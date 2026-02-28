@@ -117,6 +117,16 @@ const enUS = {
   'compression.options.size_filter.all_skipped': 'All {{count}} images are smaller than the filter threshold, skipped',
   'compression.options.common_hints.title': 'My common compression sizes',
   'compression.options.common_hints.placeholder': 'e.g. 500KB, 80%',
+  'compression.options.yes_no.no': 'No',
+  'compression.options.yes_no.yes': 'Yes',
+  'compression.options.keep_metadata.title': 'Keep Metadata',
+  'compression.options.keep_metadata.help': `EXIF: Capture params (camera, lens, time, GPS, etc.);
+ICC: Color profile (ensures consistent color display);
+XMP/IPTC: Copyright, author, keywords and other descriptive info.
+They are collectively called metadata, i.e. the hidden info of an image.
+Tip: Keep when archiving or proving copyright; remove for web, dev, or anonymous submissions to protect privacy and reduce file size.`,
+  'compression.options.convert.title': 'Format Conversion',
+  'compression.options.convert.format_label': 'Convert Format',
   //Settings.Compression.Threshold
   'settings.compression.threshold.title': 'Compression Rate Limit',
   'settings.compression.threshold.description':
@@ -362,6 +372,12 @@ const enUS = {
   ns_compress: 'Compress Images',
   ns_watch_and_compress: 'Watch and Auto-Compress',
   quit: 'Quit',
+  'compression.toolbar.clear': 'Clear',
+  'compression.toolbar.clear_confirm_title': 'Clear all?',
+  'compression.toolbar.clear_confirm_description': 'You will return to the selection page and all added images will be removed.',
+  'compression.toolbar.watch_back': 'Back',
+  'compression.toolbar.watch_back_confirm_title': 'Stop watching?',
+  'compression.toolbar.watch_back_confirm_description': 'After stopping, you will return to the folder selection page. Batch compression images will be preserved.',
   goToSettings: 'Setting',
   no_config: 'No Config',
   beforeCompression: 'Before Compression',
@@ -437,6 +453,21 @@ const enUS = {
   'page.compression.watch.guide.open_folder': 'Open Folder',
   'page.compression.watch.guide.folder': 'Folder',
   'page.compression.watch.guide.history': 'History',
+  'page.compression.watch.guide.add_folder': 'Add Monitor Folder',
+  'page.compression.watch.guide.empty_title': "You haven't added any monitor folders yet",
+  'page.compression.watch.guide.empty_description':
+    'After adding a folder, new images will be automatically monitored and compressed',
+  // Watch folder card
+  'page.compression.watch.card.monitoring': 'Monitoring',
+  'page.compression.watch.card.file_count': 'Files: {{count}}',
+  'page.compression.watch.card.file_size': 'Size: {{size}}',
+  'page.compression.watch.card.filtered': 'Filtered: {{count}}',
+  'page.compression.watch.card.scanning': 'Scanning...',
+  'page.compression.watch.card.scan_failed': 'Scan failed',
+  'page.compression.watch.card.enable_filter': 'Enable Filter',
+  'page.compression.watch.card.filter_enabled_tip': 'Ignore rules configured, click to open settings',
+  'page.compression.watch.card.filter_disabled_tip': 'Configure ignore rules, click to open settings',
+  'page.compression.watch.card.remove': 'Remove Monitor',
   'page.compression.watch.guide.attention': 'Attention',
   'page.compression.watch.guide.attention_description':
     'Only recognize new images (new, copy, move) added to the directory, and do not compress images that already exist in the directory. If an image is replaced with an image that already exists in the directory and has the same name, it will be considered the same image and will not be compressed.',

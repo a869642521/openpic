@@ -85,7 +85,7 @@ const useSettingsStore = create(
       [SettingsKey.CompressionMode]: CompressionMode.Local,
       [SettingsKey.CompressionType]: CompressionType.Lossy,
       [SettingsKey.CompressionLevel]: 4,
-      [SettingsKey.CompressionKeepMetadata]: true,
+      [SettingsKey.CompressionKeepMetadata]: false,
       [SettingsKey.Concurrency]: 6,
       [SettingsKey.CompressionThresholdEnable]: false,
       [SettingsKey.CompressionThresholdValue]: 0.1,

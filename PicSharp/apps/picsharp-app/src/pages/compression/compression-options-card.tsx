@@ -2,7 +2,7 @@ import { memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useI18n } from '@/i18n';
 import useSettingsStore from '@/store/settings';
 import useSelector from '@/hooks/useSelector';
-import { SettingsKey, CompressionOutputMode, CompressionType } from '@/constants';
+import { SettingsKey, CompressionOutputMode, CompressionType, ConvertFormat } from '@/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -53,6 +53,9 @@ function CompressionOptionsCard() {
     [SettingsKey.CompressionLevel]: compressionLevel,
     [SettingsKey.CompressionOutput]: outputMode,
     [SettingsKey.CompressionOutputSaveToFolder]: saveToFolder,
+    [SettingsKey.CompressionKeepMetadata]: keepMetadata,
+    [SettingsKey.CompressionConvertEnable]: convertEnable,
+    [SettingsKey.CompressionConvert]: convertTypes,
     set,
   } = useSettingsStore(
     useSelector([
@@ -62,6 +65,9 @@ function CompressionOptionsCard() {
       SettingsKey.CompressionLevel,
       SettingsKey.CompressionOutput,
       SettingsKey.CompressionOutputSaveToFolder,
+      SettingsKey.CompressionKeepMetadata,
+      SettingsKey.CompressionConvertEnable,
+      SettingsKey.CompressionConvert,
       'set',
     ]),
   );
@@ -73,8 +79,18 @@ function CompressionOptionsCard() {
   const [saveTab, setSaveTab] = useState<'overwrite' | 'specify'>(() =>
     outputMode === CompressionOutputMode.Overwrite ? 'overwrite' : 'specify',
   );
+  const [metadataTab, setMetadataTab] = useState<'no' | 'yes'>(() => (keepMetadata ? 'yes' : 'no'));
+  const [convertTab, setConvertTab] = useState<'no' | 'yes'>(() => (convertEnable ? 'yes' : 'no'));
+  const skipModeSyncRef = useRef(false);
+  const skipSaveSyncRef = useRef(false);
+  const skipMetadataSyncRef = useRef(false);
+  const skipConvertSyncRef = useRef(false);
 
   useEffect(() => {
+    if (skipModeSyncRef.current) {
+      skipModeSyncRef.current = false;
+      return;
+    }
     setModeTab(sizeFilterEnable ? 'filter' : 'auto');
   }, [sizeFilterEnable]);
 
@@ -83,8 +99,28 @@ function CompressionOptionsCard() {
   }, [sizeFilterValue]);
 
   useEffect(() => {
+    if (skipSaveSyncRef.current) {
+      skipSaveSyncRef.current = false;
+      return;
+    }
     setSaveTab(outputMode === CompressionOutputMode.Overwrite ? 'overwrite' : 'specify');
   }, [outputMode]);
+
+  useEffect(() => {
+    if (skipMetadataSyncRef.current) {
+      skipMetadataSyncRef.current = false;
+      return;
+    }
+    setMetadataTab(keepMetadata ? 'yes' : 'no');
+  }, [keepMetadata]);
+
+  useEffect(() => {
+    if (skipConvertSyncRef.current) {
+      skipConvertSyncRef.current = false;
+      return;
+    }
+    setConvertTab(convertEnable ? 'yes' : 'no');
+  }, [convertEnable]);
 
   useAsyncEffect(async () => {
     if (
@@ -115,6 +151,7 @@ function CompressionOptionsCard() {
           onValueChange={(v) => {
             const next = v as 'auto' | 'filter';
             if (next === modeTab) return;
+            skipModeSyncRef.current = true;
             setModeTab(next);
             const isFilter = next === 'filter';
             set(SettingsKey.CompressionSizeFilterEnable, isFilter);
@@ -267,6 +304,7 @@ function CompressionOptionsCard() {
           onValueChange={(v) => {
             const next = v as 'overwrite' | 'specify';
             if (next === saveTab) return;
+            skipSaveSyncRef.current = true;
             setSaveTab(next);
             set(
               SettingsKey.CompressionOutput,
@@ -327,6 +365,125 @@ function CompressionOptionsCard() {
               </div>
             </TabsContent>
           </CardContent>
+        </Tabs>
+      </Card>
+
+      <Card className={cardClassName} style={cardStyle}>
+        <Tabs
+          value={metadataTab}
+          activationMode='manual'
+          onValueChange={(v) => {
+            const next = v as 'no' | 'yes';
+            if (next === metadataTab) return;
+            skipMetadataSyncRef.current = true;
+            setMetadataTab(next);
+            set(SettingsKey.CompressionKeepMetadata, next === 'yes');
+          }}
+        >
+          <CardHeader
+            className='flex flex-row items-center justify-between pb-4 pt-4'
+            style={metadataTab === 'yes' ? { borderBottom: '1px solid rgb(219, 219, 220)' } : undefined}
+          >
+            <div className='flex items-center gap-1.5'>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className='inline-flex cursor-help text-neutral-400 hover:text-neutral-600'>
+                    <HelpCircle className='h-3.5 w-3.5' />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side='top' className='max-w-[300px] whitespace-pre-line text-xs leading-relaxed'>
+                  {t('compression.options.keep_metadata.help')}
+                </TooltipContent>
+              </Tooltip>
+              <h3 className='text-sm font-semibold'>{t('compression.options.keep_metadata.title')}</h3>
+            </div>
+            <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
+              <TabsTrigger
+                value='no'
+                className='flex-1 h-full rounded-full text-xs shadow-none data-[state=active]:bg-[rgb(236,237,238)] data-[state=active]:text-neutral-700 data-[state=inactive]:bg-transparent'
+              >
+                {t('compression.options.yes_no.no')}
+              </TabsTrigger>
+              <TabsTrigger
+                value='yes'
+                className='flex-1 h-full rounded-full text-xs shadow-none data-[state=active]:bg-black data-[state=active]:text-white'
+              >
+                {t('compression.options.yes_no.yes')}
+              </TabsTrigger>
+            </TabsList>
+          </CardHeader>
+        </Tabs>
+      </Card>
+
+      <Card className={cardClassName} style={cardStyle}>
+        <Tabs
+          value={convertTab}
+          activationMode='manual'
+          onValueChange={(v) => {
+            const next = v as 'no' | 'yes';
+            if (next === convertTab) return;
+            skipConvertSyncRef.current = true;
+            setConvertTab(next);
+            set(SettingsKey.CompressionConvertEnable, next === 'yes');
+            if (next === 'no') {
+              set(SettingsKey.CompressionConvert, []);
+            } else if (convertTypes.length === 0) {
+              set(SettingsKey.CompressionConvert, [ConvertFormat.Webp]);
+            }
+          }}
+        >
+          <CardHeader
+            className='flex flex-row items-center justify-between pb-4 pt-4'
+            style={convertTab === 'yes' ? { borderBottom: '1px solid rgb(219, 219, 220)' } : undefined}
+          >
+            <h3 className='text-sm font-semibold'>{t('compression.options.convert.title')}</h3>
+            <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
+              <TabsTrigger
+                value='no'
+                className='flex-1 h-full rounded-full text-xs shadow-none data-[state=active]:bg-[rgb(236,237,238)] data-[state=active]:text-neutral-700 data-[state=inactive]:bg-transparent'
+              >
+                {t('compression.options.yes_no.no')}
+              </TabsTrigger>
+              <TabsTrigger
+                value='yes'
+                className='flex-1 h-full rounded-full text-xs shadow-none data-[state=active]:bg-black data-[state=active]:text-white'
+              >
+                {t('compression.options.yes_no.yes')}
+              </TabsTrigger>
+            </TabsList>
+          </CardHeader>
+          {convertTab === 'yes' && (
+            <CardContent className='space-y-3 pb-4 pt-1.5'>
+              <div className='mt-3 flex items-center justify-between gap-2'>
+                <Label className='shrink-0 text-xs'>{t('compression.options.convert.format_label')}</Label>
+                <Select
+                  value={convertTypes[0] || ConvertFormat.Webp}
+                  onValueChange={(v) => set(SettingsKey.CompressionConvert, [v as ConvertFormat])}
+                >
+                  <SelectTrigger
+                    className='h-10 w-[140px] shrink-0 border shadow-none text-xs'
+                    style={{ borderColor: 'rgb(219, 219, 220)' }}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ConvertFormat.Png} className='text-xs'>
+                      PNG
+                    </SelectItem>
+                    <SelectItem value={ConvertFormat.Jpg} className='text-xs'>
+                      JPG
+                    </SelectItem>
+                    <SelectItem value={ConvertFormat.Avif} className='text-xs'>
+                      AVIF
+                    </SelectItem>
+                    <SelectItem value={ConvertFormat.Webp} className='text-xs'>
+                      WebP
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          )}
         </Tabs>
       </Card>
     </div>

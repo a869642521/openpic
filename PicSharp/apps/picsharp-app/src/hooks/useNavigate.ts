@@ -49,7 +49,13 @@ export function useNavigate() {
         return;
       }
 
-      if (blockCompressionRoutes.includes(location.pathname) && state.working) {
+      const isSwitchingWithinCompression =
+        nextUrl.startsWith('/compression/classic') || nextUrl.startsWith('/compression/watch');
+      if (
+        blockCompressionRoutes.includes(location.pathname) &&
+        state.working &&
+        !isSwitchingWithinCompression
+      ) {
         if (confirm) {
           const answer = await message.confirm({
             title: t('tips.are_you_sure_to_exit'),

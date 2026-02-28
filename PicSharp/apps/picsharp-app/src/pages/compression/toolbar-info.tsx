@@ -9,7 +9,7 @@ import { humanSize } from '@/utils/fs';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { correctFloat } from '@/utils';
 
-const PopoverContent = () => {
+export const ToolbarInfoDisplay = () => {
   const { files } = useCompressionStore(useSelector(['files']));
   const t = useI18n();
 
@@ -34,25 +34,25 @@ const PopoverContent = () => {
   const compressRate = reducedSize > 0 ? correctFloat((reducedSize / originalSize) * 100, 1) : '0';
 
   return (
-    <div className='flex items-center'>
+    <div className='flex items-center justify-center gap-4'>
       <div className='flex flex-col items-center'>
-        <div className='text-sm'>{t('compression.toolbar.info.total_files')}</div>
-        <div className='text-lg font-bold'>{files.length}</div>
+        <div className='text-xs text-neutral-500'>{t('compression.toolbar.info.total_files')}</div>
+        <div className='text-sm font-bold'>{files.length}</div>
       </div>
-      <Separator orientation='vertical' className='mx-6 h-[40px]' />
+      <Separator orientation='vertical' className='h-8' />
       <div className='flex flex-col items-center'>
-        <div className='text-sm'>{t('compression.toolbar.info.total_original_size')}</div>
-        <div className='text-lg font-bold'>{humanSize(originalSize)}</div>
+        <div className='text-xs text-neutral-500'>{t('compression.toolbar.info.total_original_size')}</div>
+        <div className='text-sm font-bold'>{humanSize(originalSize)}</div>
       </div>
-      <Separator orientation='vertical' className='mx-6 h-[40px]' />
+      <Separator orientation='vertical' className='h-8' />
       <div className='flex flex-col items-center'>
-        <div className='text-sm'>{t('compression.toolbar.info.total_saved_volume')}</div>
-        <div className='text-lg font-bold'>{humanSize(compressedSize)}</div>
+        <div className='text-xs text-neutral-500'>{t('compression.toolbar.info.total_saved_volume')}</div>
+        <div className='text-sm font-bold'>{humanSize(compressedSize)}</div>
       </div>
-      <Separator orientation='vertical' className='mx-6 h-[40px]' />
+      <Separator orientation='vertical' className='h-8' />
       <div className='flex flex-col items-center'>
-        <div className='text-sm'>{t('compression.toolbar.info.saved_volume_rate')}</div>
-        <div className='text-lg font-bold'>{compressRate}%</div>
+        <div className='text-xs text-neutral-500'>{t('compression.toolbar.info.saved_volume_rate')}</div>
+        <div className='text-sm font-bold'>{compressRate}%</div>
       </div>
     </div>
   );
@@ -67,7 +67,7 @@ export default memo(function ToolbarInfo() {
         </Button>
       </HoverCardTrigger>
       <HoverCardContent className='w-[max-content] dark:bg-neutral-900'>
-        <PopoverContent />
+        <ToolbarInfoDisplay />
       </HoverCardContent>
     </HoverCard>
   );
