@@ -3,9 +3,32 @@ import { ICompressor } from './compressor';
 import { isValidArray } from '.';
 import { CompressionOutputMode } from '@/constants';
 import { copyFile, exists, remove } from '@tauri-apps/plugin-fs';
-import { isMac, isLinux } from './platform';
+import { isMac, isLinux, isWindows } from './platform';
 
 const mags = ' KMGTPEZY';
+
+/** Normalize path for comparison (handles Windows backslash vs forward slash, case on Windows). */
+export function normalizePathForCompare(path: string): string {
+  let s = String(path || '').trim().replace(/\\/g, '/');
+  if (isWindows) s = s.toLowerCase();
+  return s;
+}
+
+/** Parse size string like "500kb", "500", "1.5MB" to KB (number). Returns 0 if invalid. */
+export function parseSizeToKb(input: string): number {
+  const s = String(input || '').trim().toLowerCase();
+  if (!s) return 0;
+  const match = s.match(/^([\d.]+)\s*(k|kb|m|mb|g|gb)?$/);
+  if (!match) return 0;
+  const num = Number(match[1]);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  const unit = match[2] || 'k';
+  if (unit === 'k' || unit === 'kb') return Math.floor(num);
+  if (unit === 'm' || unit === 'mb') return Math.floor(num * 1024);
+  if (unit === 'g' || unit === 'gb') return Math.floor(num * 1024 * 1024);
+  return Math.floor(num);
+}
+
 export function humanSize(bytes: number) {
   if (bytes === 0) {
     return '0B';

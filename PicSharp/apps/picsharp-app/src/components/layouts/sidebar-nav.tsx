@@ -1,4 +1,4 @@
-import Logo from '@/assets/logo.png';
+import Logo from '@/assets/LOGO.png';
 import { useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Settings, FolderArchive, FolderSearch } from 'lucide-react';
@@ -55,9 +55,10 @@ export default function SidebarNav() {
       >
         <div className='flex flex-col items-stretch gap-1'>
           <img
-            className='h-10 w-10 cursor-pointer bg-transparent duration-700 [transform-style:preserve-3d] hover:[transform:rotateY(-180deg)]'
+            className='h-10 w-[342px] bg-transparent object-contain'
             aria-hidden='true'
             src={Logo}
+            alt=''
           />
           {navigation?.primary?.map((item) => <NavItem item={item} key={item.href} />)}
         </div>

@@ -3,6 +3,7 @@ import EventEmitter from 'eventemitter3';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import useAppStore from './app';
 import { clearImageViewerCache } from '@/components/image-viewer/cache';
+import { normalizePathForCompare } from '@/utils/fs';
 
 export type CompressionModeType = 'classic' | 'watch';
 
@@ -223,13 +224,12 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
     const updated: FileInfo = {
       ...file,
       name: newName,
+      path: newPath,
+      assetPath: convertFileSrc(newPath),
     };
-    if (isCompleted) {
+    // 覆盖模式下 outputPath 与 path 相同，重命名后需同步更新
+    if (isCompleted && file.outputPath && normalizePathForCompare(file.outputPath) === normalizePathForCompare(oldPath)) {
       updated.outputPath = newPath;
-      updated.assetPath = convertFileSrc(newPath);
-    } else {
-      updated.path = newPath;
-      updated.assetPath = convertFileSrc(newPath);
     }
     const files = get().files.map((f) => (f.path === oldPath ? updated : f));
     const newFileMap = new Map(get().fileMap);

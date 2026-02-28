@@ -50,6 +50,8 @@ export enum SettingsKey {
   CompressionWatermarkImageOpacity = 'compression_watermark_image_opacity',
   CompressionWatermarkImageScale = 'compression_watermark_image_scale',
   CompressionWatchFileIgnore = 'compression_watch_file_ignore',
+  CompressionWatchSizeFilterEnable = 'compression_watch_size_filter_enable',
+  CompressionWatchSizeFilterValue = 'compression_watch_size_filter_value',
   TinypngApiKeys = 'tinypng_api_keys',
   TinypngPreserveMetadata = 'tinypng_preserve_metadata',
 }

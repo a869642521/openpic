@@ -553,6 +553,11 @@ const StatusBadge = ({ status, errorMessage }: Pick<FileInfo, 'status' | 'errorM
           {t('compression.options.mode.filter')}
         </span>
       )}
+      {status === ICompressor.Status.Pending && (
+        <Badge variant='minor' className={className}>
+          {t('page.compression.watch.status.pending')}
+        </Badge>
+      )}
     </div>
   );
 };

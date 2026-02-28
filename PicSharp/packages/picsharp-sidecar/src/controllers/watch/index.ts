@@ -51,6 +51,33 @@ app.post('/new-images', (c) => {
                   id: (++id).toString(),
                 });
               })
+              .on(Event.REMOVE, (payload) => {
+                stream.writeSSE({
+                  data: JSON.stringify(payload, jsonBigInt),
+                  event: 'remove',
+                  id: (++id).toString(),
+                });
+              })
+              .on(Event.RENAME, (oldData, newData) => {
+                stream.writeSSE({
+                  data: JSON.stringify(
+                    { oldPath: oldData.fullPath, newPath: newData.fullPath, oldData, newData },
+                    jsonBigInt,
+                  ),
+                  event: 'rename',
+                  id: (++id).toString(),
+                });
+              })
+              .on(Event.MOVE, (from, to) => {
+                stream.writeSSE({
+                  data: JSON.stringify(
+                    { oldPath: from.fullPath, newPath: to.fullPath, from, to },
+                    jsonBigInt,
+                  ),
+                  event: 'rename',
+                  id: (++id).toString(),
+                });
+              })
               .on(Event.SELF_ENOENT, () => {
                 stream.writeSSE({
                   data: '',

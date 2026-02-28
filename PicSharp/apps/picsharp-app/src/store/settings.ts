@@ -54,6 +54,8 @@ interface SettingsState {
   [SettingsKey.CompressionWatermarkImageOpacity]: number;
   [SettingsKey.CompressionWatermarkImageScale]: number;
   [SettingsKey.CompressionWatchFileIgnore]: string[];
+  [SettingsKey.CompressionWatchSizeFilterEnable]: boolean;
+  [SettingsKey.CompressionWatchSizeFilterValue]: number;
   [SettingsKey.TinypngApiKeys]: Array<{
     api_key: string;
     name: string;
@@ -109,6 +111,8 @@ const useSettingsStore = create(
       [SettingsKey.CompressionWatermarkImageOpacity]: 1,
       [SettingsKey.CompressionWatermarkImageScale]: 0.15,
       [SettingsKey.CompressionWatchFileIgnore]: ['.git', 'node_modules'],
+      [SettingsKey.CompressionWatchSizeFilterEnable]: false,
+      [SettingsKey.CompressionWatchSizeFilterValue]: 500,
       [SettingsKey.TinypngApiKeys]: [],
       [SettingsKey.TinypngPreserveMetadata]: [
         TinypngMetadata.Copyright,
