@@ -147,6 +147,10 @@ Updating, improving and correcting the documentation
 
 ## Styleguides
 
+### Code Style
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/CODE_STYLE.md](docs/CODE_STYLE.md), and [docs/I18N_GUIDE.md](docs/I18N_GUIDE.md) for technical conventions and coding standards.
+
 ### Commit Messages
 
 <!-- TODO
