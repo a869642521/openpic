@@ -11,7 +11,7 @@ import { copyFile, exists, rename } from '@tauri-apps/plugin-fs';
 import { dirname, join } from '@tauri-apps/api/path';
 import { getOSPlatform, isValidArray } from '@/utils';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
-import { RefreshCw, Download, FolderOpen, Trash2 } from 'lucide-react';
+import { RefreshCw, Columns2, FolderOpen, Undo2 } from 'lucide-react';
 import { calImageWindowSize, spawnWindow, createWebviewWindow } from '@/utils/window';
 import { WebviewWindow, getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
@@ -89,10 +89,64 @@ function FileCard(props: FileCardProps) {
     }
   };
 
-  const handleRemoveFromList = async (e: React.MouseEvent) => {
+  const handleCompare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    useCompressionStore.getState().removeFile(path);
-    useCompressionStore.getState().eventEmitter.emit('update_file_item', 'all');
+    try {
+      if (!imgRef.current) return;
+      const dimensions = imgRef.current.getDimensions();
+      if (!dimensions) return;
+      const [width, height] = calImageWindowSize(dimensions.width, dimensions.height);
+      const label = `picsharp_compare_${file.id}`;
+      const targetWindow = await WebviewWindow.getByLabel(label);
+      if (targetWindow) {
+        targetWindow.show();
+        targetWindow.setFocus();
+      } else {
+        const win = await createWebviewWindow(label, {
+          url: '/image-compare',
+          title: file.name,
+          width,
+          height,
+          minWidth: 460,
+          minHeight: 460,
+        });
+        win.once('loaded', () => {
+          win.emitTo(label, 'compare_file', { file });
+        });
+      }
+    } catch (err) {
+      console.error('image compare error', err);
+    }
+  };
+
+  const handleUndo = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { success, message: undoMessage } = await undoSave(file);
+    if (success) {
+      file.status = ICompressor.Status.Undone;
+      file.compressRate = '';
+      file.compressedBytesSize = 0;
+      file.compressedDiskSize = 0;
+      file.formattedCompressedBytesSize = '';
+      file.assetPath = convertFileSrc(file.path);
+      file.outputPath = '';
+      file.originalTempPath = '';
+      file.originalTempPathConverted = '';
+      file.saveType = null;
+      update();
+      messageApi?.success(t(undoMessage as any));
+    } else {
+      messageApi?.error(t(undoMessage as any));
+    }
+  };
+
+  const handleImageClick = async () => {
+    const filePath = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    if (await exists(filePath)) {
+      openPath(filePath);
+    } else {
+      messageApi?.error(t('tips.file_not_exists'));
+    }
   };
 
   const handleTitleClick = () => {
@@ -352,27 +406,32 @@ function FileCard(props: FileCardProps) {
     <div
       className='group relative rounded-lg transition-shadow hover:shadow-md'
       style={{ backgroundColor: 'rgb(252, 252, 252)', border: '1px solid rgb(219, 219, 220)' }}
-      onContextMenu={fileContextMenuHandler}
     >
       <div
         className='overflow-hidden rounded-lg transition-all duration-300'
       >
         <div
-          className='text-0 relative flex aspect-[4/3] items-center justify-center overflow-hidden'
+          className='text-0 relative flex aspect-[4/3] cursor-pointer items-center justify-center overflow-hidden'
           style={{ backgroundColor: 'rgb(243, 244, 248)' }}
+          onClick={handleImageClick}
         >
           <div className='absolute left-2 top-2 z-10 flex items-start'>
             <ImgTag type={file.ext} />
           </div>
           <div className='absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100'>
-            <Tooltip title={t('compression.file_action.save_as')}>
+            <Tooltip title={t('compression.file_action.compare_file')}>
               <Button
                 variant='ghost'
                 size='icon'
                 className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
-                onClick={handleSaveAs}
+                onClick={handleCompare}
+                disabled={
+                  file.status !== ICompressor.Status.Completed ||
+                  !file.outputPath ||
+                  !file.originalTempPath
+                }
               >
-                <Download className='h-4 w-4' />
+                <Columns2 className='h-4 w-4' />
               </Button>
             </Tooltip>
             <Tooltip
@@ -391,14 +450,19 @@ function FileCard(props: FileCardProps) {
                 <FolderOpen className='h-4 w-4' />
               </Button>
             </Tooltip>
-            <Tooltip title={t('compression.file_action.delete_in_list')}>
+            <Tooltip title={t('compression.file_action.undo')}>
               <Button
                 variant='ghost'
                 size='icon'
                 className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
-                onClick={handleRemoveFromList}
+                onClick={handleUndo}
+                disabled={
+                  file.status !== ICompressor.Status.Completed ||
+                  !file.outputPath ||
+                  !file.originalTempPath
+                }
               >
-                <Trash2 className='h-4 w-4' />
+                <Undo2 className='h-4 w-4' />
               </Button>
             </Tooltip>
           </div>

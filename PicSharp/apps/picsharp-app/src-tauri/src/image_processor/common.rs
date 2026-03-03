@@ -1,4 +1,4 @@
-use image::{imageops, DynamicImage, GenericImageView};
+use image::{DynamicImage, GenericImageView};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
@@ -189,24 +189,13 @@ pub fn is_webp_animation(input_path: &Path) -> Result<bool, io::Error> {
     Ok(false)
 }
 
-/// 预处理图像以获得更好的压缩效果
+/// 预处理图像以获得更好的压缩效果（仅调整画质相关，不改变尺寸）
 pub fn preprocess_image(img: &DynamicImage, quality: u8) -> DynamicImage {
     let mut processed = img.clone();
 
-    // 对于高压缩率需求，可以应用一些预处理
-    if quality < 40 {
-        // 轻微降低分辨率，如果图像足够大
-        if processed.width() > 1600 || processed.height() > 1600 {
-            let scale_factor = 0.75;
-            let new_width = (processed.width() as f32 * scale_factor) as u32;
-            let new_height = (processed.height() as f32 * scale_factor) as u32;
-            processed = processed.resize(new_width, new_height, imageops::FilterType::Lanczos3);
-        }
-
-        // 对于非常低的质量设置，应用轻微模糊以去除噪点和细节，提高压缩效率
-        if quality < 20 {
-            processed = processed.blur(1.0);
-        }
+    // 对于非常低的质量设置，应用轻微模糊以去除噪点，提高压缩效率（不改变尺寸）
+    if quality < 20 {
+        processed = processed.blur(1.0);
     }
 
     processed

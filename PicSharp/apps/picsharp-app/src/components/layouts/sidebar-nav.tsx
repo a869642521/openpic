@@ -1,7 +1,7 @@
 import Logo from '@/assets/LOGO.png';
 import { useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { Settings, FolderArchive, FolderSearch } from 'lucide-react';
+import { Settings, FolderArchive, FolderSearch, Droplets, Maximize2, FileImage } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { useI18n } from '@/i18n';
@@ -38,6 +38,21 @@ export default function SidebarNav() {
         icon: <FolderSearch className='size-4' />,
         title: t('nav.watch'),
         href: '/compression/watch',
+      },
+      {
+        icon: <Droplets className='size-4' />,
+        title: t('nav.watermark'),
+        href: '/watermark',
+      },
+      {
+        icon: <Maximize2 className='size-4' />,
+        title: t('nav.resize'),
+        href: '/resize',
+      },
+      {
+        icon: <FileImage className='size-4' />,
+        title: t('nav.convert'),
+        href: '/convert',
       },
     ],
     secondary: [],

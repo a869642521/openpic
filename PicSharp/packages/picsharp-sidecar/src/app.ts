@@ -14,6 +14,9 @@ import jpg from './controllers/compress/jpeg';
 import tiff from './controllers/compress/tiff';
 import svg from './controllers/compress/svg';
 import tinify from './controllers/compress/tinypng';
+import watermark from './controllers/watermark';
+import resize from './controllers/resize';
+import convert from './controllers/convert';
 import watch from './controllers/watch';
 import Sentry from '@sentry/node';
 import { captureError } from './utils';
@@ -88,6 +91,9 @@ export function createApp() {
   app.route('/api/compress/tif', tiff);
   app.route('/api/compress/svg', svg);
   app.route('/api/compress/tinify', tinify);
+  app.route('/api/watermark', watermark);
+  app.route('/api/resize', resize);
+  app.route('/api/convert', convert);
   app.route('/stream/watch', watch);
   return app;
 }

@@ -1,33 +1,27 @@
 import { useEffect, useRef, useContext } from 'react';
 import { UnlistenFn } from '@tauri-apps/api/event';
-import { isFunction } from 'radash';
 import { open } from '@tauri-apps/plugin-dialog';
-import { parsePaths } from '../../utils/fs';
+import { parsePaths } from '@/utils/fs';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { Folder, Upload } from 'lucide-react';
-import useCompressionStore from '../../store/compression';
-import { CompressionContext } from '.';
-import { isValidArray, sleep } from '@/utils';
+import useWatermarkStore from '@/store/watermark';
+import { WatermarkContext } from '.';
+import { isValidArray } from '@/utils';
 import { useNavigate } from '@/hooks/useNavigate';
 import { VALID_IMAGE_EXTS } from '@/constants';
 import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import message from '@/components/message';
-import { parseClipboardImages } from '@/utils/clipboard';
-import { downloadDir } from '@tauri-apps/api/path';
-import { AppContext } from '@/routes';
+import { WatermarkStatus } from '@/store/watermark';
 import UploadWidget from '@/components/animated-icon/upload-widget';
-import FormatsTips from './formats-tips';
-import { useReport } from '@/hooks/useReport';
+import FormatsTips from '@/pages/compression/formats-tips';
 
-function ClassicCompressionGuide() {
-  const { progressRef } = useContext(CompressionContext);
+function WatermarkGuide() {
+  const { progressRef } = useContext(WatermarkContext);
   const dragDropController = useRef<UnlistenFn | null>(null);
   const dropzoneRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const t = useI18n();
-  const { messageApi } = useContext(AppContext);
-  const r = useReport();
 
   const handleFiles = async (paths: string[] | null) => {
     if (!isValidArray(paths)) return;
@@ -36,14 +30,18 @@ function ClassicCompressionGuide() {
     if (!isValidArray(files)) {
       progressRef.current?.done();
       message.info({
-        title: t('common.no_image_to_compress'),
+        title: t('watermark.no_image'),
       });
       return;
     }
-    const tagged = files.map((f) => ({ ...f, batchId: 0 }));
-    useCompressionStore.getState().setWorking(true);
-    useCompressionStore.getState().setClassicFiles(tagged);
-    navigate('/compression/classic/workspace');
+    const tagged = files.map((f) => ({
+      ...f,
+      batchId: 0,
+      status: WatermarkStatus.Pending,
+    }));
+    useWatermarkStore.getState().setWorking(true);
+    useWatermarkStore.getState().setFiles(tagged);
+    navigate('/watermark/workspace');
     setTimeout(() => {
       progressRef.current?.done();
     }, 100);
@@ -91,65 +89,14 @@ function ClassicCompressionGuide() {
       });
     };
 
-    const handlePaste = async (event: ClipboardEvent) => {
-      let messageKey = 'parse-clipboard-images';
-      try {
-        event.preventDefault();
-        messageApi?.loading({
-          key: messageKey,
-          content: t('clipboard.parse_clipboard_images'),
-        });
-        let candidateFormat = 'png';
-        if (event.clipboardData) {
-          const items = Array.from(event.clipboardData.items);
-          const hasImages = items.some(
-            (item) => item.kind === 'file' && item.type.startsWith('image/'),
-          );
-          if (hasImages) {
-            candidateFormat =
-              items
-                .find((item) => item.kind === 'file' && item.type.startsWith('image/'))
-                ?.type.split('/')[1] || 'png';
-          }
-        }
-        const tempDir = await downloadDir();
-        const { success, paths, error } = await parseClipboardImages(candidateFormat, tempDir);
-        if (success) {
-          if (isValidArray(paths)) {
-            handleFiles(paths as string[]);
-          } else {
-            messageApi?.info(t('clipboard.parse_clipboard_images_no_images'));
-          }
-        } else {
-          messageApi?.error(
-            t('clipboard.parse_clipboard_images_error', { error: error?.toString() }),
-          );
-        }
-      } catch (error) {
-        messageApi?.error(t('clipboard.parse_clipboard_images_error', { error: error.toString() }));
-      } finally {
-        messageApi?.destroy(messageKey);
-      }
-    };
-
-    const setupPasteListener = () => {
-      document.addEventListener('paste', handlePaste);
-    };
-
     setupDragDrop();
-    setupPasteListener();
 
     return () => {
-      if (isFunction(dragDropController.current)) {
+      if (typeof dragDropController.current === 'function') {
         dragDropController.current();
       }
       dragDropController.current = null;
-      document.removeEventListener('paste', handlePaste);
     };
-  }, []);
-
-  useEffect(() => {
-    r('classic_guide_imp');
   }, []);
 
   return (
@@ -160,7 +107,7 @@ function ClassicCompressionGuide() {
       <UploadWidget />
       <div className='relative mt-4 text-center'>
         <p className='mx-auto max-w-2xl text-lg'>
-          {t('page.compression.classic.upload_description')}
+          {t('watermark.upload_description')}
         </p>
       </div>
 
@@ -172,11 +119,11 @@ function ClassicCompressionGuide() {
                 <div className='flex flex-col items-center justify-center gap-3 sm:flex-row'>
                   <Button onClick={handleSelectFile} variant='secondary'>
                     <Upload size={18} />
-                    {t('page.compression.classic.upload_file')}
+                    {t('watermark.upload_file')}
                   </Button>
                   <Button onClick={handleSelectDirectory} variant='secondary'>
                     <Folder size={18} />
-                    {t('page.compression.classic.upload_directory')}
+                    {t('watermark.upload_directory')}
                   </Button>
                 </div>
               </div>
@@ -192,4 +139,4 @@ function ClassicCompressionGuide() {
   );
 }
 
-export default ClassicCompressionGuide;
+export default WatermarkGuide;

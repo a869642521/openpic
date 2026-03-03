@@ -25,6 +25,7 @@ export function isValidArray(arr: unknown) {
 }
 
 export const isDirectory = async (path: string) => {
+  if (!path || String(path).trim() === '') return false;
   return (await fs.stat(path)).isDirectory();
 };
 

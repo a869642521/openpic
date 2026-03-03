@@ -121,7 +121,7 @@ impl FileInfo {
 }
 
 pub fn parse_paths(paths: Vec<String>, valid_exts: Vec<String>) -> Vec<FileInfo> {
-    paths
+    let mut results: Vec<FileInfo> = paths
         .into_par_iter()
         .flat_map(|path| {
             WalkDir::new(path)
@@ -133,7 +133,10 @@ pub fn parse_paths(paths: Vec<String>, valid_exts: Vec<String>) -> Vec<FileInfo>
                 })
                 .collect::<Vec<_>>()
         })
-        .collect()
+        .collect();
+    let mut seen = HashSet::new();
+    results.retain(|f| seen.insert(f.path.clone()));
+    results
 }
 
 pub fn is_symlink(entry: &DirEntry) -> bool {

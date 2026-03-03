@@ -1,6 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import AppLayout from './components/layouts/app-layout';
 import Compression from './pages/compression';
+import Watermark from './pages/watermark';
+import WatermarkGuide from './pages/watermark/watermark-guide';
+import WatermarkWorkspace from './pages/watermark/watermark-workspace';
+import WatermarkRedirect from './pages/watermark/watermark-redirect';
+import Resize from './pages/resize';
+import ResizeGuide from './pages/resize/resize-guide';
+import ResizeWorkspace from './pages/resize/resize-workspace';
+import ResizeRedirect from './pages/resize/resize-redirect';
+import Convert from './pages/convert';
+import ConvertGuide from './pages/convert/convert-guide';
+import ConvertWorkspace from './pages/convert/convert-workspace';
+import ConvertRedirect from './pages/convert/convert-redirect';
 import ClassicCompressionGuide from './pages/compression/classic-guide';
 import WatchCompressionGuide from './pages/compression/watch-guide';
 import CompressionClassic from './pages/compression/classic';
@@ -52,6 +64,21 @@ export default function AppRoutes() {
             <Routes>
               <Route path='/' element={<AppLayout />}>
                 <Route index element={<Navigate to='/compression' />} />
+                <Route path='watermark' element={<Watermark />}>
+                  <Route index element={<WatermarkRedirect />} />
+                  <Route path='guide' element={<WatermarkGuide />} />
+                  <Route path='workspace' element={<WatermarkWorkspace />} />
+                </Route>
+                <Route path='resize' element={<Resize />}>
+                  <Route index element={<ResizeRedirect />} />
+                  <Route path='guide' element={<ResizeGuide />} />
+                  <Route path='workspace' element={<ResizeWorkspace />} />
+                </Route>
+                <Route path='convert' element={<Convert />}>
+                  <Route index element={<ConvertRedirect />} />
+                  <Route path='guide' element={<ConvertGuide />} />
+                  <Route path='workspace' element={<ConvertWorkspace />} />
+                </Route>
                 <Route path='compression' element={<Compression />}>
                   <Route index element={<Navigate to='/compression/classic/guide' />} />
                   <Route path='classic'>

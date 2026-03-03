@@ -17,6 +17,6 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     appKey={appKey}
     options={{ isDebug: isDev, appVersion: __PICSHARP_VERSION__ }}
   >
-    <App />,
-  </AptabaseProvider>
+    <App />
+  </AptabaseProvider>,
 );

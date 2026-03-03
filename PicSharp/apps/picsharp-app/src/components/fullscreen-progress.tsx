@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import * as ProgressPrimitive from '@radix-ui/react-progress';
 import { cn } from '@/lib/utils';
 
@@ -7,6 +7,7 @@ export interface PageProgressRef {
   done: () => void;
   reset: () => void;
   setValue: (value: number) => void;
+  setDescription: (desc: string) => void;
 }
 
 function easeOutCirc(x: number): number {
@@ -18,11 +19,12 @@ const PageProgress = forwardRef<
   React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
     description?: string;
   }
->(({ className, value, description = 'Loading...', ...props }, ref) => {
+>(({ className, value, description: initialDescription = 'Loading...', ...props }, ref) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number>(null);
   const isDoneRef = useRef<boolean>(false);
+  const [description, setDescriptionState] = useState(initialDescription);
 
   const reset = () => {
     cancelAnimationFrame(timerRef.current);
@@ -72,6 +74,9 @@ const PageProgress = forwardRef<
         if (indicatorRef.current) {
           indicatorRef.current.style.transform = `translateX(-${100 - value}%)`;
         }
+      },
+      setDescription: (desc: string) => {
+        setDescriptionState(desc);
       },
     };
   });
