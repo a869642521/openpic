@@ -2,20 +2,36 @@ import { memo } from 'react';
 import { useI18n } from '@/i18n';
 import useSettingsStore from '@/store/settings';
 import useSelector from '@/hooks/useSelector';
-import { SettingsKey } from '@/constants';
+import { SettingsKey, TinypngMetadata } from '@/constants';
 import SettingItem from '../setting-item';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { CheckboxGroup } from '@/components/checkbox-group';
 
 function SettingsCompressionMetadata() {
   const t = useI18n();
-  const { compression_keep_metadata: keepMetadata = false, set } = useSettingsStore(
+  const { compression_keep_metadata: preserveMetadata = [], set } = useSettingsStore(
     useSelector([SettingsKey.CompressionKeepMetadata, 'set']),
   );
 
-  const handleCheckedChange = (checked: boolean) => {
-    set(SettingsKey.CompressionKeepMetadata, checked);
+  const enabled = (preserveMetadata?.length ?? 0) > 0;
+  const options = [
+    { value: TinypngMetadata.Copyright, label: t('settings.tinypng.metadata.copyright') },
+    { value: TinypngMetadata.Creator, label: t('settings.tinypng.metadata.creator') },
+    { value: TinypngMetadata.Location, label: t('settings.tinypng.metadata.location') },
+  ];
+
+  const handleSwitchChange = (checked: boolean) => {
+    set(
+      SettingsKey.CompressionKeepMetadata,
+      checked ? [TinypngMetadata.Copyright, TinypngMetadata.Creator, TinypngMetadata.Location] : [],
+    );
   };
+
+  const handleValueChange = (value: string[]) => {
+    set(SettingsKey.CompressionKeepMetadata, value);
+  };
+
   return (
     <SettingItem
       title={
@@ -27,7 +43,12 @@ function SettingsCompressionMetadata() {
       titleClassName='flex flex-row items-center gap-x-2'
       description={t('settings.compression.metadata.description')}
     >
-      <Switch checked={keepMetadata} onCheckedChange={handleCheckedChange} />
+      <div className='flex flex-col gap-3'>
+        <Switch checked={enabled} onCheckedChange={handleSwitchChange} />
+        {enabled && (
+          <CheckboxGroup options={options} value={preserveMetadata} onChange={handleValueChange} />
+        )}
+      </div>
     </SettingItem>
   );
 }

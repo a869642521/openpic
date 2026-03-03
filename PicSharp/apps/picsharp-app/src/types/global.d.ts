@@ -1,5 +1,6 @@
 import type { ICompressor } from '../utils/compressor';
-import type { CompressionOutputMode } from '../constants';
+import type { CompressionOutputMode, ConvertFormat, ResizeFit, WatermarkType } from '../constants';
+import type { TinypngMetadata } from '../constants';
 
 declare global {
   interface ConvertResult {
@@ -17,10 +18,41 @@ declare global {
     };
   }
 
+  interface WatchFolderSettings {
+    sizeFilterEnable: boolean;
+    sizeFilterValue: number;
+    preserveMetadata: TinypngMetadata[];
+    convertEnable: boolean;
+    convertTypes: ConvertFormat[];
+    convertAlpha: string;
+    resizeEnable: boolean;
+    resizeDimensions: [number, number];
+    resizeFit: ResizeFit;
+    watermarkType: WatermarkType;
+    watermarkText: string;
+    watermarkTextColor: string;
+    watermarkFontSize: number;
+    watermarkPosition: string;
+    watermarkImagePath: string;
+    watermarkImageOpacity: number;
+    watermarkImageScale: number;
+  }
+
+  interface WatchFolder {
+    id: string;
+    path: string;
+    addMode: 'monitor_only' | 'compress_then_monitor' | null;
+    status: 'monitoring' | 'paused' | 'stopped' | 'error';
+    settings: WatchFolderSettings;
+    stats: { totalCount: number; totalBytes: number } | { failed: true } | null;
+  }
+
   interface FileInfo {
     id: string;
     name: string;
     path: string;
+    batchId?: number;
+    watchFolderId?: string;
     parentDir: string;
     assetPath: string;
     bytesSize: number;

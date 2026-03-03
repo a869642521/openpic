@@ -2,6 +2,7 @@ import Scheduler from './scheduler';
 import {
   CompressionMode,
   ConvertFormat,
+  TinypngMetadata,
   VALID_TINYPNG_IMAGE_EXTS,
   ResizeFit,
   WatermarkType,
@@ -31,6 +32,7 @@ export namespace ICompressor {
     convertAlpha?: string;
     resizeDimensions?: [number, number];
     resizeEnable?: boolean;
+    resizeScale?: number;
     resizeFit?: ResizeFit;
     watermarkType?: WatermarkType;
     watermarkPosition?: WatermarkPosition;
@@ -40,7 +42,7 @@ export namespace ICompressor {
     watermarkImagePath?: string;
     watermarkImageOpacity?: number;
     watermarkImageScale?: number;
-    keepMetadata?: boolean;
+    preserveMetadata?: TinypngMetadata[];
   };
 
   export enum Status {
@@ -136,18 +138,11 @@ export namespace ICompressor {
     input_path: string;
     options?: CompressPayloadOptions;
     process_options:
-      | Partial<{
-          progressive: boolean;
-          compressionLevel: number;
-          adaptiveFiltering: boolean;
-          palette: boolean;
-          quality: number;
-          effort: number;
-          colours: number;
-          colors: number;
-          dither: number;
-          force: boolean;
-        }>
+      | {
+          minQuality?: number;
+          maxQuality?: number;
+          speed?: number;
+        }
       | Partial<{
           fixErrors?: boolean;
           force?: boolean;
@@ -351,6 +346,11 @@ export namespace ICompressor {
   };
 }
 
+/** TinyPNG API 使用 creation 而非 creator */
+function mapPreserveMetadataForTinify(arr: TinypngMetadata[]): string[] {
+  return arr.map((v) => (v === TinypngMetadata.Creator ? 'creation' : v));
+}
+
 const JPEG_COMPRESSION_LEVEL_PRESET: Record<
   string,
   Partial<ICompressor.JpegCompressPayload['process_options']>
@@ -361,22 +361,22 @@ const JPEG_COMPRESSION_LEVEL_PRESET: Record<
     progressive: true,
   },
   2: {
-    quality: 80,
+    quality: 88,
     mozjpeg: true,
     progressive: true,
   },
   3: {
-    quality: 70,
+    quality: 80,
     mozjpeg: true,
     progressive: true,
   },
   4: {
-    quality: 40,
+    quality: 70,
     mozjpeg: true,
     progressive: true,
   },
   5: {
-    quality: 10,
+    quality: 55,
     mozjpeg: true,
     progressive: true,
   },
@@ -384,69 +384,24 @@ const JPEG_COMPRESSION_LEVEL_PRESET: Record<
 
 const PNG_COMPRESSION_LEVEL_PRESET: Record<
   string,
-  Partial<ICompressor.PngCompressPayload['process_options']>
+  { minQuality: number; maxQuality: number; speed: number }
 > = {
-  1: {
-    quality: 100,
-    palette: true,
-    adaptiveFiltering: true,
-    effort: 1,
-    compressionLevel: 3,
-  },
-  2: {
-    quality: 95,
-    palette: true,
-    adaptiveFiltering: true,
-    effort: 3,
-    compressionLevel: 5,
-  },
-  3: {
-    quality: 90,
-    palette: true,
-    adaptiveFiltering: true,
-    effort: 9,
-    compressionLevel: 9,
-  },
-  4: {
-    quality: 85,
-    palette: true,
-    adaptiveFiltering: true,
-    effort: 7,
-    compressionLevel: 7,
-  },
-  5: {
-    quality: 70,
-    palette: true,
-    adaptiveFiltering: true,
-    effort: 9,
-    compressionLevel: 9,
-  },
+  1: { minQuality: 90, maxQuality: 100, speed: 1 },
+  2: { minQuality: 78, maxQuality: 95,  speed: 3 },
+  3: { minQuality: 65, maxQuality: 85,  speed: 5 },
+  4: { minQuality: 50, maxQuality: 75,  speed: 7 },
+  5: { minQuality: 30, maxQuality: 60,  speed: 9 },
 };
 
 const WEBP_COMPRESSION_LEVEL_PRESET: Record<
   string,
   Partial<ICompressor.WebpCompressPayload['process_options']>
 > = {
-  1: {
-    quality: 95,
-    alphaQuality: 100,
-  },
-  2: {
-    quality: 85,
-    alphaQuality: 100,
-  },
-  3: {
-    quality: 70,
-    alphaQuality: 100,
-  },
-  4: {
-    quality: 30,
-    alphaQuality: 100,
-  },
-  5: {
-    quality: 10,
-    alphaQuality: 100,
-  },
+  1: { quality: 95, alphaQuality: 100, effort: 4 },
+  2: { quality: 88, alphaQuality: 100, effort: 5 },
+  3: { quality: 80, alphaQuality: 100, effort: 5 },
+  4: { quality: 70, alphaQuality: 100, effort: 6 },
+  5: { quality: 55, alphaQuality: 100, effort: 6 },
 };
 
 const AVIF_COMPRESSION_LEVEL_PRESET: Record<
@@ -457,16 +412,16 @@ const AVIF_COMPRESSION_LEVEL_PRESET: Record<
     quality: 95,
   },
   2: {
-    quality: 85,
+    quality: 88,
   },
   3: {
-    quality: 70,
+    quality: 80,
   },
   4: {
-    quality: 30,
+    quality: 70,
   },
   5: {
-    quality: 10,
+    quality: 55,
   },
 };
 
@@ -478,16 +433,16 @@ const TIFF_COMPRESSION_LEVEL_PRESET: Record<
     quality: 95,
   },
   2: {
-    quality: 85,
+    quality: 88,
   },
   3: {
-    quality: 70,
+    quality: 80,
   },
   4: {
-    quality: 30,
+    quality: 70,
   },
   5: {
-    quality: 10,
+    quality: 55,
   },
 };
 
@@ -634,8 +589,9 @@ export default class Compressor {
               convert_alpha: this.options.convertAlpha,
               resize_dimensions: this.options.resizeDimensions,
               resize_enable: this.options.resizeEnable,
+              resize_scale: this.options.resizeScale ?? 0,
               resize_fit: this.options.resizeFit,
-              keep_metadata: this.options.keepMetadata,
+              keep_metadata: (this.options.preserveMetadata?.length ?? 0) > 0,
               watermark_type: this.options.watermarkType,
               watermark_position: this.options.watermarkPosition,
               watermark_text: this.options.watermarkText,
@@ -675,7 +631,7 @@ export default class Compressor {
       return this.process('png/lossless', {
         input_path: file.path,
         process_options: {
-          strip: !this.options?.keepMetadata,
+          strip: (this.options.preserveMetadata?.length ?? 0) === 0,
           force: true,
           lossless: true,
         },
@@ -751,6 +707,7 @@ export default class Compressor {
       process_options: {
         api_key: draw(this.options.tinifyApiKeys),
         mime_type: file.mimeType,
+        preserveMetadata: mapPreserveMetadataForTinify(this.options.preserveMetadata ?? []),
       },
     });
   };

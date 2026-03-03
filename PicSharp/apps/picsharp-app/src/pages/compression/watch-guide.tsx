@@ -1,7 +1,7 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import useSelector from '@/hooks/useSelector';
-import { FolderClock, Plus, X } from 'lucide-react';
-import useCompressionStore from '../../store/compression';
+import { FolderClock, Plus } from 'lucide-react';
+import useCompressionStore, { defaultWatchFolderSettings } from '../../store/compression';
 import { useNavigate } from '@/hooks/useNavigate';
 import { useI18n } from '@/i18n';
 import { useEffect, useState, useContext, useRef } from 'react';
@@ -22,6 +22,8 @@ import FormatsTips from './formats-tips';
 import { useReport } from '@/hooks/useReport';
 import { openSettingsWindow } from '@/utils/window';
 import { message } from '@/components/message';
+import WatchAddModeDialog, { WatchAddMode } from './watch-add-mode-dialog';
+import { detectFolderOverlap } from '@/utils/watch-utils';
 
 const WATCH_HISTORY_KEY = 'compression_watch_history';
 
@@ -42,9 +44,11 @@ function WatchCompressionGuide() {
   const { progressRef } = useContext(CompressionContext);
   const [history, setHistory] = useState<Array<{ name: string; path: string }>>([]);
   const navigate = useNavigate();
-  const { setWorking, setWatchingFolder } = useCompressionStore(
-    useSelector(['setWorking', 'setWatchingFolder']),
+  const { setWorking, addWatchFolder } = useCompressionStore(
+    useSelector(['setWorking', 'addWatchFolder']),
   );
+  const [addModeDialogOpen, setAddModeDialogOpen] = useState(false);
+  const pendingAddPathRef = useRef<string | null>(null);
   const t = useI18n();
   const { messageApi } = useContext(AppContext);
   const dragDropController = useRef<UnlistenFn | null>(null);
@@ -68,6 +72,18 @@ function WatchCompressionGuide() {
         messageApi?.error(t('tips.path_not_exists'));
         return;
       }
+
+      // 检测路径重叠
+      const { watchFolders } = useCompressionStore.getState();
+      const existingPaths = watchFolders.map((f) => f.path);
+      const conflictPath = detectFolderOverlap(path, existingPaths);
+      if (conflictPath) {
+        messageApi?.error(
+          t('page.compression.watch.folder.overlap_warning', { path: conflictPath }),
+        );
+        return;
+      }
+
       const {
         [SettingsKey.CompressionMode]: compressionMode,
         [SettingsKey.TinypngApiKeys]: tinypngApiKeys,
@@ -132,12 +148,35 @@ function WatchCompressionGuide() {
 
       const newHistory = await updateWatchHistory(path);
       setHistory(newHistory);
-      progressRef.current?.show(true);
-      useCompressionStore.getState().setWatchFiles([]);
-      setWorking(true);
-      setWatchingFolder(path);
-      navigate(`/compression/watch/workspace`);
+      pendingAddPathRef.current = path;
+      setAddModeDialogOpen(true);
     }
+  };
+
+  const handleAddModeSelect = (mode: WatchAddMode) => {
+    const path = pendingAddPathRef.current;
+    if (!path) return;
+    setAddModeDialogOpen(false);
+    pendingAddPathRef.current = null;
+
+    const newFolder: WatchFolder = {
+      id: `watch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      path,
+      addMode: mode,
+      status: 'monitoring',
+      settings: { ...defaultWatchFolderSettings },
+      stats: null,
+    };
+
+    progressRef.current?.show(true);
+    setWorking(true);
+    addWatchFolder(newFolder);
+    navigate(`/compression/watch/workspace`);
+  };
+
+  const handleAddModeCancel = () => {
+    setAddModeDialogOpen(false);
+    pendingAddPathRef.current = null;
   };
 
   const handleHistorySelect = async (path: string) => {
@@ -269,6 +308,11 @@ function WatchCompressionGuide() {
       <div className='absolute bottom-2 right-2' onClick={stopPropagation}>
         <FormatsTips />
       </div>
+      <WatchAddModeDialog
+        open={addModeDialogOpen}
+        onSelect={handleAddModeSelect}
+        onCancel={handleAddModeCancel}
+      />
     </div>
   );
 }

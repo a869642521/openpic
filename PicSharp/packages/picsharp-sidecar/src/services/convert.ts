@@ -24,6 +24,9 @@ export async function convert(
       case ConvertFormat.AVIF:
         result = await stream.avif().toFile(outputPath);
         break;
+      case ConvertFormat.GIF:
+        result = await stream.gif().toFile(outputPath);
+        break;
       default:
         throw new Error(`Unsupported convert format: ${format}`);
     }
@@ -37,6 +40,7 @@ export async function convert(
     captureError(error);
     return {
       success: false,
+      output_path: outputPath,
       format,
       error_msg: error instanceof Error ? error.message : error.toString(),
     };

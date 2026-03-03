@@ -122,9 +122,13 @@ export function MessageDialog({
               {title}
             </AlertDialogPrimitive.Title>
 
-            {description && (
+            {description ? (
               <AlertDialogPrimitive.Description className='text-sm leading-relaxed text-neutral-600 dark:text-neutral-400'>
                 {description}
+              </AlertDialogPrimitive.Description>
+            ) : (
+              <AlertDialogPrimitive.Description className='sr-only'>
+                {typeof title === 'string' ? title : 'Dialog'}
               </AlertDialogPrimitive.Description>
             )}
 
@@ -252,9 +256,13 @@ function createDialog(config: MessageConfig): Promise<boolean> {
                   </div>
                 </AlertDialogPrimitive.Title>
 
-                {config.description && (
+                {config.description ? (
                   <AlertDialogPrimitive.Description className='text-sm leading-relaxed text-neutral-600 dark:text-neutral-400'>
                     {config.description}
+                  </AlertDialogPrimitive.Description>
+                ) : (
+                  <AlertDialogPrimitive.Description className='sr-only'>
+                    {typeof config.title === 'string' ? config.title : 'Dialog'}
                   </AlertDialogPrimitive.Description>
                 )}
 

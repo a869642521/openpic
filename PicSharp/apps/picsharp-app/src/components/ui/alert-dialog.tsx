@@ -130,7 +130,7 @@ function showAlertDialog({
     const [loading, setLoading] = useState(false);
     return (
       <AlertDialog open={true}>
-        <AlertDialogContent aria-describedby=''>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{title}</AlertDialogTitle>
             {description ? (
@@ -139,7 +139,11 @@ function showAlertDialog({
               ) : (
                 <div className='max-h-[400px] max-w-[460px] overflow-auto'>{description}</div>
               )
-            ) : null}
+            ) : (
+              <AlertDialogDescription className='sr-only'>
+                {typeof title === 'string' ? title : 'Dialog'}
+              </AlertDialogDescription>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel

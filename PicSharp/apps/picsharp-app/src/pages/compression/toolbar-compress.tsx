@@ -4,7 +4,7 @@ import { Sparkles, LoaderPinwheel } from 'lucide-react';
 import useAppStore from '@/store/app';
 import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';
-import { SettingsKey, CompressionMode, CompressionOutputMode } from '@/constants';
+import { SettingsKey, CompressionMode, CompressionOutputMode, ResizeMode } from '@/constants';
 import { isValidArray, correctFloat, calProgress } from '@/utils';
 import Compressor from '@/utils/compressor';
 import { humanSize } from '@/utils/fs';
@@ -35,6 +35,7 @@ function ToolbarCompress() {
         'eventEmitter',
       ]),
     );
+  const { setCurrentBatchTimestamp } = useCompressionStore.getState();
   const {
     [SettingsKey.TinypngApiKeys]: tinypngApiKeys,
     [SettingsKey.CompressionMode]: compressionMode,
@@ -52,6 +53,8 @@ function ToolbarCompress() {
     [SettingsKey.CompressionConvertAlpha]: convertAlpha,
     [SettingsKey.CompressionResizeDimensions]: resizeDimensions,
     [SettingsKey.CompressionResizeEnable]: resizeEnable,
+    [SettingsKey.CompressionResizeMode]: resizeMode,
+    [SettingsKey.CompressionResizeScale]: resizeScale,
     [SettingsKey.CompressionResizeFit]: resizeFit,
     [SettingsKey.CompressionWatermarkType]: watermarkType,
     [SettingsKey.CompressionWatermarkPosition]: watermarkPosition,
@@ -61,7 +64,7 @@ function ToolbarCompress() {
     [SettingsKey.CompressionWatermarkImagePath]: watermarkImagePath,
     [SettingsKey.CompressionWatermarkImageOpacity]: watermarkImageOpacity,
     [SettingsKey.CompressionWatermarkImageScale]: watermarkImageScale,
-    [SettingsKey.CompressionKeepMetadata]: keepMetadata,
+    [SettingsKey.CompressionKeepMetadata]: preserveMetadata,
   } = useSettingsStore(
     useSelector([
       SettingsKey.TinypngApiKeys,
@@ -80,6 +83,8 @@ function ToolbarCompress() {
       SettingsKey.CompressionConvertAlpha,
       SettingsKey.CompressionResizeDimensions,
       SettingsKey.CompressionResizeEnable,
+      SettingsKey.CompressionResizeMode,
+      SettingsKey.CompressionResizeScale,
       SettingsKey.CompressionResizeFit,
       SettingsKey.CompressionWatermarkType,
       SettingsKey.CompressionWatermarkPosition,
@@ -96,15 +101,24 @@ function ToolbarCompress() {
   const r = useReport();
   const indicatorRef = useRef<HTMLSpanElement>(null);
   const { messageApi } = useContext(AppContext);
+
+  const pendingFiles = selectedFiles.filter(
+    (path) => {
+      const status = fileMap.get(path)?.status;
+      return (
+        status === ICompressor.Status.Pending ||
+        status === ICompressor.Status.Failed ||
+        status === ICompressor.Status.Undone
+      );
+    }
+  );
+  const pendingCount = pendingFiles.length;
+  const hasCompleted = files.some((f) => f.status === ICompressor.Status.Completed);
+
   const disabledCompress =
     !files.length ||
     inCompressing ||
-    !selectedFiles.some(
-      (file) =>
-        fileMap.get(file)?.status === ICompressor.Status.Pending ||
-        fileMap.get(file)?.status === ICompressor.Status.Failed ||
-        fileMap.get(file)?.status === ICompressor.Status.Undone,
-    );
+    pendingCount === 0;
 
   const handleCompress = async () => {
     r('classic_compress_start', {
@@ -171,6 +185,7 @@ function ToolbarCompress() {
 
       setInCompressing(true);
       const sizeFilterBytes = sizeFilterEnable ? sizeFilterValue * 1024 : 0;
+      const seenPaths = new Set<string>();
       const files = selectedFiles
         .map<FileInfo>((id) => {
           const file = fileMap.get(id);
@@ -181,6 +196,8 @@ function ToolbarCompress() {
               file.status === ICompressor.Status.Undone ||
               file.status === ICompressor.Status.Skipped)
           ) {
+            if (seenPaths.has(file.path)) return null;
+            seenPaths.add(file.path);
             if (sizeFilterBytes > 0 && file.bytesSize < sizeFilterBytes) {
               file.status = ICompressor.Status.Skipped;
               eventEmitter.emit('update_file_item', file.path);
@@ -220,6 +237,7 @@ function ToolbarCompress() {
         convertAlpha,
         resizeDimensions,
         resizeEnable,
+        resizeScale: resizeMode === ResizeMode.Scale ? (resizeScale ?? 50) : 0,
         resizeFit,
         watermarkType,
         watermarkPosition,
@@ -229,7 +247,7 @@ function ToolbarCompress() {
         watermarkImagePath,
         watermarkImageOpacity,
         watermarkImageScale,
-        keepMetadata: keepMetadata,
+        preserveMetadata: preserveMetadata ?? [],
       }).compress(
         files,
         (res) => {
@@ -334,6 +352,7 @@ function ToolbarCompress() {
         indicatorRef.current.textContent = '0%';
       }
       setInCompressing(false);
+      setCurrentBatchTimestamp(Date.now());
     }
   };
 
@@ -360,7 +379,11 @@ function ToolbarCompress() {
         )}
       >
         <Sparkles className='h-4 w-4' />
-        <span>{t('common.start')}</span>
+        <span>
+          {hasCompleted
+            ? t('page.compression.classic.compress_new', { count: pendingCount })
+            : t('common.start')}
+        </span>
       </div>
     </Button>
   );

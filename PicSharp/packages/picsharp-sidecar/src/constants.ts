@@ -27,6 +27,7 @@ export enum ConvertFormat {
   JPG = 'jpg',
   WEBP = 'webp',
   AVIF = 'avif',
+  GIF = 'gif',
 }
 
 export const VALID_IMAGE_EXTS = [

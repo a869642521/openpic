@@ -2,7 +2,7 @@ import { memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useI18n } from '@/i18n';
 import useSettingsStore from '@/store/settings';
 import useSelector from '@/hooks/useSelector';
-import { SettingsKey, CompressionOutputMode, CompressionType, ConvertFormat } from '@/constants';
+import { SettingsKey, CompressionOutputMode, CompressionType, ConvertFormat, TinypngMetadata, ResizeMode, ResizeFit } from '@/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -22,6 +22,7 @@ import { openPath } from '@tauri-apps/plugin-opener';
 import { downloadDir } from '@tauri-apps/api/path';
 import { useAsyncEffect } from 'ahooks';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { CheckboxGroup } from '@/components/checkbox-group';
 import { Textarea } from '@/components/ui/textarea';
 
 const cardClassName = 'w-[280px] flex-shrink-0 border-0 shadow-none rounded-xl';
@@ -53,9 +54,14 @@ function CompressionOptionsCard() {
     [SettingsKey.CompressionLevel]: compressionLevel,
     [SettingsKey.CompressionOutput]: outputMode,
     [SettingsKey.CompressionOutputSaveToFolder]: saveToFolder,
-    [SettingsKey.CompressionKeepMetadata]: keepMetadata,
+    [SettingsKey.CompressionKeepMetadata]: preserveMetadata,
     [SettingsKey.CompressionConvertEnable]: convertEnable,
     [SettingsKey.CompressionConvert]: convertTypes,
+    [SettingsKey.CompressionResizeEnable]: resizeEnable,
+    [SettingsKey.CompressionResizeMode]: resizeMode,
+    [SettingsKey.CompressionResizeScale]: resizeScale,
+    [SettingsKey.CompressionResizeDimensions]: resizeDimensions,
+    [SettingsKey.CompressionResizeFit]: resizeFit,
     set,
   } = useSettingsStore(
     useSelector([
@@ -68,6 +74,11 @@ function CompressionOptionsCard() {
       SettingsKey.CompressionKeepMetadata,
       SettingsKey.CompressionConvertEnable,
       SettingsKey.CompressionConvert,
+      SettingsKey.CompressionResizeEnable,
+      SettingsKey.CompressionResizeMode,
+      SettingsKey.CompressionResizeScale,
+      SettingsKey.CompressionResizeDimensions,
+      SettingsKey.CompressionResizeFit,
       'set',
     ]),
   );
@@ -79,12 +90,20 @@ function CompressionOptionsCard() {
   const [saveTab, setSaveTab] = useState<'overwrite' | 'specify'>(() =>
     outputMode === CompressionOutputMode.Overwrite ? 'overwrite' : 'specify',
   );
-  const [metadataTab, setMetadataTab] = useState<'no' | 'yes'>(() => (keepMetadata ? 'yes' : 'no'));
+  const [metadataTab, setMetadataTab] = useState<'no' | 'yes'>(() =>
+    (preserveMetadata?.length ?? 0) > 0 ? 'yes' : 'no',
+  );
   const [convertTab, setConvertTab] = useState<'no' | 'yes'>(() => (convertEnable ? 'yes' : 'no'));
+  const [resizeTab, setResizeTab] = useState<'no' | 'yes'>(() => (resizeEnable ? 'yes' : 'no'));
+  const [resizeModeTab, setResizeModeTab] = useState<ResizeMode>(() => resizeMode ?? ResizeMode.Scale);
+  const [scaleInput, setScaleInput] = useState(() => String(resizeScale ?? 50));
+  const [widthInput, setWidthInput] = useState(() => String(resizeDimensions?.[0] ?? 0));
+  const [heightInput, setHeightInput] = useState(() => String(resizeDimensions?.[1] ?? 0));
   const skipModeSyncRef = useRef(false);
   const skipSaveSyncRef = useRef(false);
   const skipMetadataSyncRef = useRef(false);
   const skipConvertSyncRef = useRef(false);
+  const skipResizeSyncRef = useRef(false);
 
   useEffect(() => {
     if (skipModeSyncRef.current) {
@@ -111,8 +130,8 @@ function CompressionOptionsCard() {
       skipMetadataSyncRef.current = false;
       return;
     }
-    setMetadataTab(keepMetadata ? 'yes' : 'no');
-  }, [keepMetadata]);
+    setMetadataTab((preserveMetadata?.length ?? 0) > 0 ? 'yes' : 'no');
+  }, [preserveMetadata]);
 
   useEffect(() => {
     if (skipConvertSyncRef.current) {
@@ -121,6 +140,27 @@ function CompressionOptionsCard() {
     }
     setConvertTab(convertEnable ? 'yes' : 'no');
   }, [convertEnable]);
+
+  useEffect(() => {
+    if (skipResizeSyncRef.current) {
+      skipResizeSyncRef.current = false;
+      return;
+    }
+    setResizeTab(resizeEnable ? 'yes' : 'no');
+  }, [resizeEnable]);
+
+  useEffect(() => {
+    setResizeModeTab(resizeMode ?? ResizeMode.Scale);
+  }, [resizeMode]);
+
+  useEffect(() => {
+    setScaleInput(String(resizeScale ?? 50));
+  }, [resizeScale]);
+
+  useEffect(() => {
+    setWidthInput(String(resizeDimensions?.[0] ?? 0));
+    setHeightInput(String(resizeDimensions?.[1] ?? 0));
+  }, [resizeDimensions]);
 
   useAsyncEffect(async () => {
     if (
@@ -155,9 +195,6 @@ function CompressionOptionsCard() {
             setModeTab(next);
             const isFilter = next === 'filter';
             set(SettingsKey.CompressionSizeFilterEnable, isFilter);
-            if (!isFilter) {
-              set(SettingsKey.CompressionType, CompressionType.Lossless);
-            }
           }}
         >
           <CardHeader
@@ -377,7 +414,12 @@ function CompressionOptionsCard() {
             if (next === metadataTab) return;
             skipMetadataSyncRef.current = true;
             setMetadataTab(next);
-            set(SettingsKey.CompressionKeepMetadata, next === 'yes');
+            set(
+              SettingsKey.CompressionKeepMetadata,
+              next === 'yes'
+                ? [TinypngMetadata.Copyright, TinypngMetadata.Creator, TinypngMetadata.Location]
+                : [],
+            );
           }}
         >
           <CardHeader
@@ -412,6 +454,184 @@ function CompressionOptionsCard() {
               </TabsTrigger>
             </TabsList>
           </CardHeader>
+          {metadataTab === 'yes' && (
+            <CardContent className='space-y-3 pb-4 pt-4'>
+              <CheckboxGroup
+                options={[
+                  { value: TinypngMetadata.Copyright, label: t('settings.tinypng.metadata.copyright') },
+                  { value: TinypngMetadata.Creator, label: t('settings.tinypng.metadata.creator') },
+                  { value: TinypngMetadata.Location, label: t('settings.tinypng.metadata.location') },
+                ]}
+                value={preserveMetadata}
+                onChange={(v) => set(SettingsKey.CompressionKeepMetadata, v)}
+              />
+            </CardContent>
+          )}
+        </Tabs>
+      </Card>
+
+      <Card className={cardClassName} style={cardStyle}>
+        <Tabs
+          value={resizeTab}
+          activationMode='manual'
+          onValueChange={(v) => {
+            const next = v as 'no' | 'yes';
+            if (next === resizeTab) return;
+            skipResizeSyncRef.current = true;
+            setResizeTab(next);
+            set(SettingsKey.CompressionResizeEnable, next === 'yes');
+          }}
+        >
+          <CardHeader
+            className='flex flex-row items-center justify-between pb-4 pt-4'
+            style={resizeTab === 'yes' ? { borderBottom: '1px solid rgb(219, 219, 220)' } : undefined}
+          >
+            <h3 className='text-sm font-semibold'>{t('compression.options.resize.title')}</h3>
+            <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
+              <TabsTrigger
+                value='no'
+                className='flex-1 h-full rounded-full text-xs shadow-none data-[state=active]:bg-[rgb(236,237,238)] data-[state=active]:text-neutral-700 data-[state=inactive]:bg-transparent'
+              >
+                {t('compression.options.yes_no.no')}
+              </TabsTrigger>
+              <TabsTrigger
+                value='yes'
+                className='flex-1 h-full rounded-full text-xs shadow-none data-[state=active]:bg-black data-[state=active]:text-white'
+              >
+                {t('compression.options.yes_no.yes')}
+              </TabsTrigger>
+            </TabsList>
+          </CardHeader>
+          {resizeTab === 'yes' && (
+            <CardContent className='space-y-3 pb-4 pt-4'>
+              {/* 模式切换：比例缩放 / 自定义 */}
+              <div className='flex gap-1'>
+                {([ResizeMode.Scale, ResizeMode.Custom] as ResizeMode[]).map((mode) => {
+                  const active = resizeModeTab === mode;
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        setResizeModeTab(mode);
+                        set(SettingsKey.CompressionResizeMode, mode);
+                      }}
+                      className={[
+                        'flex-1 rounded-full border py-1.5 text-xs font-medium transition-colors',
+                        active
+                          ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                          : 'border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500',
+                      ].join(' ')}
+                    >
+                      {mode === ResizeMode.Scale
+                        ? t('compression.options.resize.mode.scale')
+                        : t('compression.options.resize.mode.custom')}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {resizeModeTab === ResizeMode.Scale && (
+                <div className='flex items-center justify-between gap-2'>
+                  <Label className='shrink-0 text-xs'>{t('compression.options.resize.scale_label')}</Label>
+                  <div
+                    className='flex h-10 w-[140px] shrink-0 items-center gap-1 rounded-md border px-3 shadow-none'
+                    style={{ borderColor: 'rgb(219, 219, 220)' }}
+                  >
+                    <Input
+                      type='number'
+                      min={1}
+                      max={99}
+                      value={scaleInput}
+                      onChange={(e) => setScaleInput(e.target.value)}
+                      onBlur={() => {
+                        const num = Number(scaleInput);
+                        const valid = Number.isFinite(num) && num >= 1 && num <= 99;
+                        const final = valid ? Math.floor(num) : 50;
+                        set(SettingsKey.CompressionResizeScale, final);
+                        setScaleInput(String(final));
+                      }}
+                      className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                    />
+                    <span className='shrink-0 text-xs text-neutral-500'>%</span>
+                  </div>
+                </div>
+              )}
+
+              {resizeModeTab === ResizeMode.Custom && (
+                <div className='space-y-2'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <Label className='shrink-0 text-xs'>{t('compression.options.resize.width_label')}</Label>
+                    <div
+                      className='flex h-10 w-[140px] shrink-0 items-center gap-1 rounded-md border px-3 shadow-none'
+                      style={{ borderColor: 'rgb(219, 219, 220)' }}
+                    >
+                      <Input
+                        type='number'
+                        min={0}
+                        value={widthInput}
+                        placeholder='0'
+                        onChange={(e) => setWidthInput(e.target.value)}
+                        onBlur={() => {
+                          const num = Number(widthInput);
+                          const valid = Number.isFinite(num) && num >= 0;
+                          const final = valid ? Math.floor(num) : 0;
+                          set(SettingsKey.CompressionResizeDimensions, [final, resizeDimensions?.[1] ?? 0]);
+                          setWidthInput(String(final));
+                        }}
+                        className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                      />
+                      <span className='shrink-0 text-xs text-neutral-500'>{t('compression.options.resize.px')}</span>
+                    </div>
+                  </div>
+                  <div className='flex items-center justify-between gap-2'>
+                    <Label className='shrink-0 text-xs'>{t('compression.options.resize.height_label')}</Label>
+                    <div
+                      className='flex h-10 w-[140px] shrink-0 items-center gap-1 rounded-md border px-3 shadow-none'
+                      style={{ borderColor: 'rgb(219, 219, 220)' }}
+                    >
+                      <Input
+                        type='number'
+                        min={0}
+                        value={heightInput}
+                        placeholder='0'
+                        onChange={(e) => setHeightInput(e.target.value)}
+                        onBlur={() => {
+                          const num = Number(heightInput);
+                          const valid = Number.isFinite(num) && num >= 0;
+                          const final = valid ? Math.floor(num) : 0;
+                          set(SettingsKey.CompressionResizeDimensions, [resizeDimensions?.[0] ?? 0, final]);
+                          setHeightInput(String(final));
+                        }}
+                        className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                      />
+                      <span className='shrink-0 text-xs text-neutral-500'>{t('compression.options.resize.px')}</span>
+                    </div>
+                  </div>
+                  <div className='flex items-center justify-between gap-2'>
+                    <Label className='shrink-0 text-xs'>{t('compression.options.resize.fit_label')}</Label>
+                    <Select
+                      value={resizeFit}
+                      onValueChange={(v) => set(SettingsKey.CompressionResizeFit, v as ResizeFit)}
+                    >
+                      <SelectTrigger
+                        className='h-10 w-[140px] shrink-0 border shadow-none text-xs'
+                        style={{ borderColor: 'rgb(219, 219, 220)' }}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {([ResizeFit.Cover, ResizeFit.Contain, ResizeFit.Fill, ResizeFit.Inside, ResizeFit.Outside] as ResizeFit[]).map((fit) => (
+                          <SelectItem key={fit} value={fit} className='text-xs'>
+                            {t(`settings.compression.resize.fit.option.${fit}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          )}
         </Tabs>
       </Card>
 
@@ -457,7 +677,7 @@ function CompressionOptionsCard() {
               <div className='mt-3 flex items-center justify-between gap-2'>
                 <Label className='shrink-0 text-xs'>{t('compression.options.convert.format_label')}</Label>
                 <Select
-                  value={convertTypes[0] || ConvertFormat.Webp}
+                  value={convertTypes[0] ?? ConvertFormat.Webp}
                   onValueChange={(v) => set(SettingsKey.CompressionConvert, [v as ConvertFormat])}
                 >
                   <SelectTrigger
@@ -467,18 +687,11 @@ function CompressionOptionsCard() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ConvertFormat.Png} className='text-xs'>
-                      PNG
-                    </SelectItem>
-                    <SelectItem value={ConvertFormat.Jpg} className='text-xs'>
-                      JPG
-                    </SelectItem>
-                    <SelectItem value={ConvertFormat.Avif} className='text-xs'>
-                      AVIF
-                    </SelectItem>
-                    <SelectItem value={ConvertFormat.Webp} className='text-xs'>
-                      WebP
-                    </SelectItem>
+                    <SelectItem value={ConvertFormat.Webp} className='text-xs'>WebP</SelectItem>
+                    <SelectItem value={ConvertFormat.Png} className='text-xs'>PNG</SelectItem>
+                    <SelectItem value={ConvertFormat.Jpg} className='text-xs'>JPG</SelectItem>
+                    <SelectItem value={ConvertFormat.Avif} className='text-xs'>AVIF</SelectItem>
+                    <SelectItem value={ConvertFormat.Gif} className='text-xs'>GIF</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

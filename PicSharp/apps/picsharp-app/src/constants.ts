@@ -39,6 +39,8 @@ export enum SettingsKey {
   CompressionConvert = 'compression_convert',
   CompressionConvertAlpha = 'compression_convert_alpha',
   CompressionResizeEnable = 'compression_resize_enable',
+  CompressionResizeMode = 'compression_resize_mode',
+  CompressionResizeScale = 'compression_resize_scale',
   CompressionResizeDimensions = 'compression_resize_dimensions',
   CompressionResizeFit = 'compression_resize_fit',
   CompressionWatermarkType = 'compression_watermark_type',
@@ -84,6 +86,12 @@ export enum ConvertFormat {
   Webp = 'webp',
   Jpg = 'jpg',
   Png = 'png',
+  Gif = 'gif',
+}
+
+export enum ResizeMode {
+  Scale = 'scale',
+  Custom = 'custom',
 }
 
 export enum ResizeFit {

@@ -29,6 +29,7 @@ const OptionsSchema = z
     convert_types: z.array(z.nativeEnum(ConvertFormat)).optional().default([]),
     convert_alpha: z.string().optional().default('#FFFFFF'),
     resize_enable: z.boolean().optional().default(false),
+    resize_scale: z.number().optional().default(0),
     resize_dimensions: z.array(z.number()).optional().default([]),
     resize_fit: z.nativeEnum(ResizeFit).optional().default(ResizeFit.Cover),
     watermark_type: z.nativeEnum(WatermarkType).optional().default(WatermarkType.None),

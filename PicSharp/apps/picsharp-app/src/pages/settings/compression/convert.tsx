@@ -17,6 +17,10 @@ function Format() {
 
   const options = [
     {
+      value: ConvertFormat.Webp,
+      label: 'WebP',
+    },
+    {
       value: ConvertFormat.Png,
       label: 'PNG',
     },
@@ -29,13 +33,13 @@ function Format() {
       label: 'AVIF',
     },
     {
-      value: ConvertFormat.Webp,
-      label: 'WebP',
+      value: ConvertFormat.Gif,
+      label: 'GIF',
     },
   ];
 
   const handleValueChange = (value: string[]) => {
-    set(SettingsKey.CompressionConvert, value);
+    set(SettingsKey.CompressionConvert, value.length > 0 ? [value[value.length - 1] as ConvertFormat] : []);
   };
 
   return (

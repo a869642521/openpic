@@ -4,14 +4,37 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import useAppStore from './app';
 import { clearImageViewerCache } from '@/components/image-viewer/cache';
 import { normalizePathForCompare } from '@/utils/fs';
+import { ConvertFormat, ResizeFit, WatermarkType, WatermarkPosition, TinypngMetadata } from '@/constants';
 
 export type CompressionModeType = 'classic' | 'watch';
+
+export const defaultWatchFolderSettings: WatchFolderSettings = {
+  sizeFilterEnable: false,
+  sizeFilterValue: 500,
+  preserveMetadata: [],
+  convertEnable: false,
+  convertTypes: [] as ConvertFormat[],
+  convertAlpha: '#ffffff',
+  resizeEnable: false,
+  resizeDimensions: [0, 0],
+  resizeFit: ResizeFit.Inside,
+  watermarkType: WatermarkType.None,
+  watermarkText: '',
+  watermarkTextColor: '#ffffff',
+  watermarkFontSize: 24,
+  watermarkPosition: WatermarkPosition.BottomRight,
+  watermarkImagePath: '',
+  watermarkImageOpacity: 0.8,
+  watermarkImageScale: 0.2,
+};
 
 interface CompressionState {
   mode: CompressionModeType;
   working: boolean;
   inCompressing: boolean;
-  watchingFolder: string;
+  /** 最近一次压缩完成的时间戳，新拖入文件使用此值作为 batchId */
+  currentBatchTimestamp: number;
+  watchFolders: WatchFolder[];
   eventEmitter: EventEmitter;
   files: FileInfo[];
   fileMap: Map<string, FileInfo>;
@@ -22,24 +45,25 @@ interface CompressionState {
   watchFiles: FileInfo[];
   watchFileMap: Map<string, FileInfo>;
   watchSelectedFiles: string[];
-  watchFolderStats:
-    | {
-        totalCount: number;
-        totalBytes: number;
-      }
-    | { failed: true }
-    | null;
 }
 
 interface CompressionAction {
   setMode: (mode: CompressionModeType) => void;
   setWorking: (value: boolean) => void;
   setInCompressing: (inCompressing: boolean) => void;
-  setWatchingFolder: (path: string) => void;
+  setCurrentBatchTimestamp: (ts: number) => void;
+  // Watch folder management
+  addWatchFolder: (folder: WatchFolder) => void;
+  removeWatchFolder: (id: string) => void;
+  updateWatchFolderSettings: (id: string, settings: Partial<WatchFolderSettings>) => void;
+  updateWatchFolderStatus: (id: string, status: WatchFolder['status']) => void;
+  updateWatchFolderStats: (id: string, stats: WatchFolder['stats']) => void;
+  // File management
   setFiles: (files: FileInfo[]) => void;
   setClassicFiles: (files: FileInfo[]) => void;
   setWatchFiles: (files: FileInfo[]) => void;
   appendWatchFiles: (files: FileInfo[]) => void;
+  appendClassicFiles: (files: FileInfo[]) => void;
   setSelectedFiles: (selectedFiles: string[]) => void;
   removeFile: (path: string) => void;
   updateFilePath: (oldPath: string, newPath: string, newName: string) => void;
@@ -47,12 +71,6 @@ interface CompressionAction {
   resetClassic: () => void;
   resetWatch: () => void;
   resetWatchOnly: () => void;
-  setWatchFolderStats: (
-    stats:
-      | { totalCount: number; totalBytes: number }
-      | { failed: true }
-      | null,
-  ) => void;
 }
 
 function syncViewFromMode(state: Partial<CompressionState>, mode: CompressionModeType) {
@@ -74,7 +92,7 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   mode: 'classic',
   working: false,
   eventEmitter: new EventEmitter(),
-  watchingFolder: '',
+  watchFolders: [],
   files: [],
   fileMap: new Map(),
   selectedFiles: [],
@@ -84,11 +102,11 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   watchFiles: [],
   watchFileMap: new Map(),
   watchSelectedFiles: [],
-  watchFolderStats: null,
   inCompressing: false,
+  currentBatchTimestamp: 0,
 
-  setWatchFolderStats: (stats) => {
-    set({ watchFolderStats: stats });
+  setCurrentBatchTimestamp: (ts: number) => {
+    set({ currentBatchTimestamp: ts });
   },
 
   setMode: (mode: CompressionModeType) => {
@@ -103,8 +121,50 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   setInCompressing: (inCompressing: boolean) => {
     set({ inCompressing });
   },
-  setWatchingFolder: (path) => {
-    set({ watchingFolder: path });
+
+  // Watch folder management
+  addWatchFolder: (folder: WatchFolder) => {
+    const { watchFolders } = get();
+    set({ watchFolders: [...watchFolders, folder] });
+  },
+
+  removeWatchFolder: (id: string) => {
+    const { watchFolders, watchFiles, mode } = get();
+    const newFolders = watchFolders.filter((f) => f.id !== id);
+    // Also remove all files belonging to this folder
+    const newFiles = watchFiles.filter((f) => f.watchFolderId !== id);
+    const fileMap = new Map(newFiles.map((f) => [f.path, f]));
+    const selectedFiles = newFiles.map((f) => f.path);
+    const patch: Partial<CompressionState> = {
+      watchFolders: newFolders,
+      watchFiles: newFiles,
+      watchFileMap: fileMap,
+      watchSelectedFiles: selectedFiles,
+    };
+    if (mode === 'watch') {
+      Object.assign(patch, { files: newFiles, fileMap, selectedFiles });
+    }
+    set(patch);
+  },
+
+  updateWatchFolderSettings: (id: string, settings: Partial<WatchFolderSettings>) => {
+    const { watchFolders } = get();
+    const newFolders = watchFolders.map((f) =>
+      f.id === id ? { ...f, settings: { ...f.settings, ...settings } } : f,
+    );
+    set({ watchFolders: newFolders });
+  },
+
+  updateWatchFolderStatus: (id: string, status: WatchFolder['status']) => {
+    const { watchFolders } = get();
+    const newFolders = watchFolders.map((f) => (f.id === id ? { ...f, status } : f));
+    set({ watchFolders: newFolders });
+  },
+
+  updateWatchFolderStats: (id: string, stats: WatchFolder['stats']) => {
+    const { watchFolders } = get();
+    const newFolders = watchFolders.map((f) => (f.id === id ? { ...f, stats } : f));
+    set({ watchFolders: newFolders });
   },
 
   setFiles: (files: FileInfo[]) => {
@@ -133,16 +193,17 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   },
 
   setClassicFiles: (files: FileInfo[]) => {
-    const fileMap = new Map(files.map((file) => [file.path, file]));
-    const selectedFiles = files.map((file) => file.path);
+    const deduped = Array.from(new Map(files.map((f) => [f.path, f])).values());
+    const fileMap = new Map(deduped.map((file) => [file.path, file]));
+    const selectedFiles = deduped.map((file) => file.path);
     const { mode } = get();
     const patch: Partial<CompressionState> = {
-      classicFiles: files,
+      classicFiles: deduped,
       classicFileMap: fileMap,
       classicSelectedFiles: selectedFiles,
     };
     if (mode === 'classic') {
-      Object.assign(patch, { files, fileMap, selectedFiles });
+      Object.assign(patch, { files: deduped, fileMap, selectedFiles });
     }
     set(patch);
   },
@@ -158,6 +219,24 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
     };
     if (mode === 'watch') {
       Object.assign(patch, { files, fileMap, selectedFiles });
+    }
+    set(patch);
+  },
+
+  appendClassicFiles: (newFiles: FileInfo[]) => {
+    const { classicFiles, classicFileMap, mode } = get();
+    const uniqueNew = newFiles.filter((f) => !classicFileMap.has(f.path));
+    if (uniqueNew.length === 0) return;
+    const merged = [...uniqueNew, ...classicFiles];
+    const fileMap = new Map(merged.map((file) => [file.path, file]));
+    const selectedFiles = merged.map((file) => file.path);
+    const patch: Partial<CompressionState> = {
+      classicFiles: merged,
+      classicFileMap: fileMap,
+      classicSelectedFiles: selectedFiles,
+    };
+    if (mode === 'classic') {
+      Object.assign(patch, { files: merged, fileMap, selectedFiles });
     }
     set(patch);
   },
@@ -263,7 +342,7 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
     set({
       working: false,
       inCompressing: false,
-      watchingFolder: '',
+      watchFolders: [],
       files: [],
       fileMap: new Map(),
       selectedFiles: [],
@@ -273,7 +352,6 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
       watchFiles: [],
       watchFileMap: new Map(),
       watchSelectedFiles: [],
-      watchFolderStats: null,
     });
   },
 
@@ -294,11 +372,10 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
     const { mode } = get();
     const patch: Partial<CompressionState> = {
       working: false,
-      watchingFolder: '',
+      watchFolders: [],
       watchFiles: [],
       watchFileMap: new Map(),
       watchSelectedFiles: [],
-      watchFolderStats: null,
     };
     if (mode === 'watch') {
       Object.assign(patch, { files: [], fileMap: new Map(), selectedFiles: [] });
@@ -309,8 +386,7 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   resetWatchOnly: () => {
     set({
       working: false,
-      watchingFolder: '',
-      watchFolderStats: null,
+      watchFolders: [],
     });
   },
 }));

@@ -97,51 +97,70 @@ export async function resizeFromSharpStream(
 ): Promise<Dimensions> {
   const { stream, originalMetadata, options } = params;
 
+  if (!originalMetadata.width || !originalMetadata.height) {
+    return originalMetadata;
+  }
+
+  let resizeParams: ResizeOptions | null = null;
+
+  // 比例缩放：resize_scale 为 1-99 的整数百分比
   if (
-    originalMetadata.width &&
-    originalMetadata.height &&
+    options.resize_scale &&
+    typeof options.resize_scale === 'number' &&
+    options.resize_scale > 0 &&
+    options.resize_scale < 100
+  ) {
+    const scale = options.resize_scale / 100;
+    resizeParams = {
+      width: Math.round(originalMetadata.width * scale),
+      height: Math.round(originalMetadata.height * scale),
+      fit: 'fill',
+    };
+  } else if (
     isValidArray(options.resize_dimensions) &&
     options.resize_dimensions.some((dim: number) => dim > 0)
   ) {
-    const params: ResizeOptions = {
-      fit: 'inside',
-    };
+    // 自定义尺寸
+    resizeParams = { fit: 'inside' };
     let useFit = false;
     if (
       options.resize_dimensions[0] > 0 &&
-      options.resize_dimensions[0] < (originalMetadata.width || Infinity)
+      options.resize_dimensions[0] < originalMetadata.width
     ) {
-      params.width = options.resize_dimensions[0];
+      resizeParams.width = options.resize_dimensions[0];
       useFit = true;
     }
     if (
       options.resize_dimensions[1] > 0 &&
-      options.resize_dimensions[1] < (originalMetadata.height || Infinity)
+      options.resize_dimensions[1] < originalMetadata.height
     ) {
-      params.height = options.resize_dimensions[1];
+      resizeParams.height = options.resize_dimensions[1];
       useFit = true;
     }
     if (options.resize_fit && useFit) {
-      params.fit = options.resize_fit;
+      resizeParams.fit = options.resize_fit;
     }
-    if (params.width || params.height) {
-      stream.resize(params);
-      const tempFilePath = createTempFilePath(`resize_${nanoid()}.webp`, options.temp_dir);
-      const info = await stream
-        .clone()
-        .webp({
-          quality: 70,
-          force: true,
-          effort: 0,
-        })
-        .toFile(tempFilePath);
-      return {
-        width: info.width,
-        height: info.height,
-      };
-    } else {
-      return originalMetadata;
+    if (!resizeParams.width && !resizeParams.height) {
+      resizeParams = null;
     }
   }
+
+  if (resizeParams) {
+    stream.resize(resizeParams);
+    const tempFilePath = createTempFilePath(`resize_${nanoid()}.webp`, options.temp_dir);
+    const info = await stream
+      .clone()
+      .webp({
+        quality: 70,
+        force: true,
+        effort: 0,
+      })
+      .toFile(tempFilePath);
+    return {
+      width: info.width,
+      height: info.height,
+    };
+  }
+
   return originalMetadata;
 }

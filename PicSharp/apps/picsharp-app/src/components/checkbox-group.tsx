@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 interface CheckboxGroupOption {
@@ -18,7 +16,6 @@ interface CheckboxGroupProps {
   disabled?: boolean;
   className?: string;
   itemClassName?: string;
-  labelClassName?: string;
 }
 
 export function CheckboxGroup({
@@ -30,20 +27,17 @@ export function CheckboxGroup({
   disabled = false,
   className,
   itemClassName,
-  labelClassName,
 }: CheckboxGroupProps) {
   const [internalValue, setInternalValue] = useState<string[]>(defaultValue || []);
 
   const isControlled = controlledValue !== undefined;
   const currentValue = isControlled ? controlledValue : internalValue;
 
-  const handleCheckedChange = (optionValue: string, checked: boolean) => {
-    let newValue: string[];
-    if (checked) {
-      newValue = [...currentValue, optionValue];
-    } else {
-      newValue = currentValue.filter((v) => v !== optionValue);
-    }
+  const handleToggle = (optionValue: string) => {
+    const isChecked = currentValue.includes(optionValue);
+    const newValue = isChecked
+      ? currentValue.filter((v) => v !== optionValue)
+      : [...currentValue, optionValue];
 
     if (!isControlled) {
       setInternalValue(newValue);
@@ -52,33 +46,41 @@ export function CheckboxGroup({
   };
 
   return (
-    <div role='group' className={cn('flex gap-2', className)}>
+    <div role='group' className={cn('flex gap-2 w-full', className)}>
       {options.map((option) => {
         const isChecked = currentValue.includes(option.value);
         const isDisabled = disabled || option.disabled;
         const id = name ? `${name}-${option.value}` : option.value;
 
         return (
-          <div key={option.value} className={`flex items-center space-x-2 ${itemClassName || ''}`}>
-            <Checkbox
-              id={id}
-              name={name ? `${name}[]` : undefined} // For form submission, treat as an array
-              value={option.value}
-              checked={isChecked}
-              onCheckedChange={(checked) => {
-                handleCheckedChange(option.value, !!checked);
-              }}
-              disabled={isDisabled}
-              aria-labelledby={`${id}-label`}
+          <button
+            key={option.value}
+            type='button'
+            id={id}
+            name={name ? `${name}[]` : undefined}
+            value={option.value}
+            disabled={isDisabled}
+            onClick={() => handleToggle(option.value)}
+            aria-pressed={isChecked}
+            aria-labelledby={`${id}-label`}
+            className={cn(
+              'flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border cursor-pointer',
+              isChecked
+                ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                : 'border-neutral-200 bg-neutral-100 text-neutral-400 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500',
+              isDisabled && 'cursor-not-allowed opacity-50',
+              itemClassName,
+            )}
+          >
+            <span
+              className={cn(
+                'w-1.5 h-1.5 rounded-full shrink-0',
+                isChecked ? 'bg-blue-600 dark:bg-blue-400' : 'bg-neutral-300 dark:bg-neutral-600',
+              )}
+              aria-hidden
             />
-            <Label
-              htmlFor={id}
-              id={`${id}-label`}
-              className={`font-normal ${isDisabled ? 'cursor-not-allowed opacity-70' : ''} ${labelClassName || ''}`}
-            >
-              {option.label}
-            </Label>
-          </div>
+            <span id={`${id}-label`} className='truncate'>{option.label}</span>
+          </button>
         );
       })}
     </div>

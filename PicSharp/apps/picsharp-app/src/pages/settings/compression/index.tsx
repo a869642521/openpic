@@ -3,11 +3,8 @@ import Mode from './mode';
 import Section from '../section';
 import Output from './output';
 import Threshold from './threshold';
-import Type from './type';
-import Level from './level';
 import { useEffect, useRef } from 'react';
 import Convert from './convert';
-import Metadata from './metadata';
 import WatchIgnore from './watch-ignore';
 import Resize from './resize';
 import Watermark from './watermark';
@@ -50,9 +47,6 @@ export default function SettingsCompression() {
     <Section>
       <Card>
         <Mode />
-        <Type />
-        <Level />
-        <Metadata />
       </Card>
       <Card ref={outputElRef}>
         <Output />

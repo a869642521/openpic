@@ -9,6 +9,7 @@ import {
   CompressionMode,
   CompressionType,
   ConvertFormat,
+  ResizeMode,
   ResizeFit,
   WatermarkType,
   WatermarkPosition,
@@ -30,7 +31,7 @@ interface SettingsState {
   [SettingsKey.CompressionMode]: CompressionMode;
   [SettingsKey.CompressionType]: CompressionType;
   [SettingsKey.CompressionLevel]: number;
-  [SettingsKey.CompressionKeepMetadata]: boolean;
+  [SettingsKey.CompressionKeepMetadata]: TinypngMetadata[];
   [SettingsKey.Concurrency]: number;
   [SettingsKey.CompressionThresholdEnable]: boolean;
   [SettingsKey.CompressionThresholdValue]: number;
@@ -43,6 +44,8 @@ interface SettingsState {
   [SettingsKey.CompressionConvert]: ConvertFormat[];
   [SettingsKey.CompressionConvertAlpha]: string;
   [SettingsKey.CompressionResizeEnable]: boolean;
+  [SettingsKey.CompressionResizeMode]: ResizeMode;
+  [SettingsKey.CompressionResizeScale]: number;
   [SettingsKey.CompressionResizeDimensions]: [number, number];
   [SettingsKey.CompressionResizeFit]: ResizeFit;
   [SettingsKey.CompressionWatermarkType]: WatermarkType;
@@ -86,8 +89,8 @@ const useSettingsStore = create(
       [SettingsKey.PrivacyMode]: false,
       [SettingsKey.CompressionMode]: CompressionMode.Local,
       [SettingsKey.CompressionType]: CompressionType.Lossy,
-      [SettingsKey.CompressionLevel]: 4,
-      [SettingsKey.CompressionKeepMetadata]: false,
+      [SettingsKey.CompressionLevel]: 3,
+      [SettingsKey.CompressionKeepMetadata]: [],
       [SettingsKey.Concurrency]: 6,
       [SettingsKey.CompressionThresholdEnable]: false,
       [SettingsKey.CompressionThresholdValue]: 0.1,
@@ -100,6 +103,8 @@ const useSettingsStore = create(
       [SettingsKey.CompressionConvert]: [],
       [SettingsKey.CompressionConvertAlpha]: '#FFFFFF',
       [SettingsKey.CompressionResizeEnable]: false,
+      [SettingsKey.CompressionResizeMode]: ResizeMode.Scale,
+      [SettingsKey.CompressionResizeScale]: 50,
       [SettingsKey.CompressionResizeDimensions]: [0, 0],
       [SettingsKey.CompressionResizeFit]: ResizeFit.Cover,
       [SettingsKey.CompressionWatermarkType]: WatermarkType.None,
@@ -163,17 +168,50 @@ const useSettingsStore = create(
             } else {
               set({ [key]: value as WatermarkPosition });
             }
+          } else if (key === SettingsKey.CompressionKeepMetadata) {
+            // 迁移：旧版 boolean 转为 TinypngMetadata[]
+            if (typeof value === 'boolean') {
+              const arr: TinypngMetadata[] = value
+                ? [TinypngMetadata.Copyright, TinypngMetadata.Creator, TinypngMetadata.Location]
+                : [];
+              set({ [key]: arr });
+              await store.set(key, arr);
+              await store.save();
+            } else {
+              set({ [key]: (Array.isArray(value) ? value : []) as TinypngMetadata[] });
+            }
           } else {
             set({ [key]: value });
           }
         }
+        // 迁移：重置错误的 resize 设置（批量压缩意外改变尺寸的根因）
+        const state = get();
+        const dims = state[SettingsKey.CompressionResizeDimensions];
+        const enable = state[SettingsKey.CompressionResizeEnable];
+        const isResize1024 =
+          enable &&
+          Array.isArray(dims) &&
+          dims.length >= 2 &&
+          dims[0] === 1024 &&
+          dims[1] === 1024;
+        if (isResize1024) {
+          set({
+            [SettingsKey.CompressionResizeEnable]: false,
+            [SettingsKey.CompressionResizeDimensions]: [0, 0],
+          });
+          await store.set(SettingsKey.CompressionResizeEnable, false);
+          await store.set(SettingsKey.CompressionResizeDimensions, [0, 0]);
+          await store.save();
+        }
       },
 
       set: async (key, value) => {
-        set({ [key]: value });
+        // 先落盘再更新 Zustand 状态，确保主窗口通过 storage 事件收到通知时
+        // Tauri 插件文件已写入新值，init(true) 能读到正确的设置
         const store = await load(SETTINGS_FILE_NAME, { autoSave: false });
         await store.set(key, value);
         await store.save();
+        set({ [key]: value });
       },
 
       reset: async () => {
