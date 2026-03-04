@@ -234,10 +234,11 @@ function CompressionWatch() {
       const folder = getFolderSettings(folderId);
       if (!folder) return;
 
-      const { sizeFilterEnable, sizeFilterValue, compressionEnable } = folder.settings;
+      const { sizeFilterEnable, sizeFilterValue, compressionEnable, resizeEnable, convertEnable, watermarkEnable } = folder.settings;
 
-      // 压缩未开启时，不处理新增文件
-      if (compressionEnable === false) return;
+      // 所有功能均未开启时，跳过处理
+      const hasAnyFeature = compressionEnable !== false || resizeEnable || convertEnable || watermarkEnable;
+      if (!hasAnyFeature) return;
 
       parsePaths(paths, VALID_IMAGE_EXTS)
         .then((candidates) => {
@@ -323,7 +324,13 @@ function CompressionWatch() {
             const q = queuesRef.current.get(folder.id) || [];
             q.push(path);
             queuesRef.current.set(folder.id, q);
+            const proc = throttledProcessorsRef.current.get(folder.id);
+            if (proc) proc();
           } else {
+            // 文件已被处理过：仅在有功能启用时追加为 Pending（仅展示，不再重复处理）
+            const { compressionEnable, resizeEnable, convertEnable, watermarkEnable } = currentFolder.settings;
+            const hasAnyFeature = compressionEnable !== false || resizeEnable || convertEnable || watermarkEnable;
+            if (!hasAnyFeature) return;
             parsePaths([path], VALID_IMAGE_EXTS)
               .then((candidates) => {
                 if (isValidArray(candidates)) {
@@ -347,8 +354,6 @@ function CompressionWatch() {
               })
               .catch(captureError);
           }
-          const proc = throttledProcessorsRef.current.get(folder.id);
-          if (proc) proc();
         } else if (msg.event === 'rename') {
           const payload = JSON.parse(msg.data);
           const oldPath = payload.oldPath;
@@ -473,8 +478,10 @@ function CompressionWatch() {
   /** 如果所有文件夹都已停止/错误，返回引导页 */
   const checkAndRegainIfEmpty = () => {
     const { watchFolders, resetWatchOnly } = useCompressionStore.getState();
-    const activeCount = watchFolders.filter((f) => f.status === 'monitoring').length;
-    if (activeCount === 0 && watchFolders.length > 0) {
+    const hasAnyActive = watchFolders.some(
+      (f) => f.status === 'monitoring' || f.status === 'paused',
+    );
+    if (!hasAnyActive && watchFolders.length > 0) {
       resetWatchOnly();
       progressRef.current?.done();
       navigate('/compression/watch/guide');

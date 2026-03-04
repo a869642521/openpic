@@ -173,6 +173,32 @@ export function WatermarkPositionPicker({
   );
 }
 
+// ─── Shared feature types & helpers ──────────────────────────────────────────
+
+export type WatchFeature = 'compression' | 'resize' | 'watermark' | 'convert';
+
+export const ALL_FEATURES: WatchFeature[] = ['compression', 'resize', 'watermark', 'convert'];
+
+export const FEATURE_ENABLE_KEYS: Record<WatchFeature, keyof WatchFolderSettings> = {
+  compression: 'compressionEnable',
+  resize: 'resizeEnable',
+  watermark: 'watermarkEnable',
+  convert: 'convertEnable',
+};
+
+export function isFeatureEnabled(feature: WatchFeature, settings: WatchFolderSettings): boolean {
+  switch (feature) {
+    case 'compression':
+      return settings.compressionEnable !== false;
+    case 'resize':
+      return settings.resizeEnable;
+    case 'watermark':
+      return settings.watermarkEnable;
+    case 'convert':
+      return settings.convertEnable;
+  }
+}
+
 // ─── Shared panel props ───────────────────────────────────────────────────────
 
 interface FeaturePanelProps {
@@ -203,53 +229,46 @@ export const CompressionPanel = memo(function CompressionPanel({
   return (
     <div className={SECTION_CLASS}>
       <div className={cn(ROW_CLASS, 'mb-0')}>
-        <div>
-          <p className='text-sm font-medium'>
-            {t('page.compression.watch.folder.settings.compression')}
-          </p>
-          <p className='mt-0.5 text-xs text-neutral-500'>
-            {t('page.compression.watch.folder.settings.compression_desc')}
-          </p>
-        </div>
-        <YesNoTabs
-          value={s.compressionEnable !== false}
-          onChange={(enabled) => onChange({ compressionEnable: enabled })}
-        />
+        <p className='text-sm font-medium'>
+          {t('page.compression.watch.folder.settings.compression')}
+        </p>
+        <Tabs
+          value={s.sizeFilterEnable ? 'filter' : 'auto'}
+          activationMode='manual'
+          onValueChange={(v) => onChange({ sizeFilterEnable: v === 'filter' })}
+        >
+          <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
+            <TabsTrigger
+              value='auto'
+              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
+            >
+              {t('compression.options.mode.auto')}
+            </TabsTrigger>
+            <TabsTrigger
+              value='filter'
+              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
+            >
+              {t('compression.options.mode.filter')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
-      {s.compressionEnable !== false && (
+      {s.sizeFilterEnable && (
         <div className='mt-3'>
           <div className={ROW_CLASS}>
             <Label className={LABEL_CLASS}>
               {t('page.compression.watch.folder.settings.size_filter')}
             </Label>
-            <div className='flex items-center gap-2'>
-              <button
-                type='button'
-                onClick={() => onChange({ sizeFilterEnable: !s.sizeFilterEnable })}
-                className={cn(
-                  'inline-flex h-7 items-center rounded-md border px-2 text-xs transition-colors',
-                  s.sizeFilterEnable
-                    ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
-                    : 'border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-500',
-                )}
-              >
-                {s.sizeFilterEnable
-                  ? t('page.compression.watch.folder.settings.size_filter_on')
-                  : t('page.compression.watch.folder.settings.size_filter_off')}
-              </button>
-              {s.sizeFilterEnable && (
-                <div className='flex h-7 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
-                  <Input
-                    type='text'
-                    value={filterInput}
-                    placeholder='500'
-                    onChange={(e) => setFilterInput(e.target.value)}
-                    onBlur={handleFilterBlur}
-                    className='h-auto min-w-0 w-[48px] border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
-                  />
-                  <span className='shrink-0 text-xs text-neutral-400'>KB</span>
-                </div>
-              )}
+            <div className='flex h-7 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
+              <Input
+                type='text'
+                value={filterInput}
+                placeholder='500'
+                onChange={(e) => setFilterInput(e.target.value)}
+                onBlur={handleFilterBlur}
+                className='h-auto min-w-0 w-[48px] border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+              />
+              <span className='shrink-0 text-xs text-neutral-400'>KB</span>
             </div>
           </div>
         </div>
@@ -266,68 +285,48 @@ export const ConvertPanel = memo(function ConvertPanel({
 }: FeaturePanelProps) {
   const t = useI18n();
 
+  const currentFormat = s.convertTypes[0] ?? ConvertFormat.Webp;
+
   return (
     <div className={SECTION_CLASS}>
       <div className={cn(ROW_CLASS, 'mb-0')}>
         <p className='text-sm font-medium'>
           {t('page.compression.watch.folder.settings.convert')}
         </p>
-        <YesNoTabs
-          value={s.convertEnable}
-          onChange={(enabled) =>
-            onChange({
-              convertEnable: enabled,
-              convertTypes: !enabled
-                ? []
-                : s.convertTypes.length > 0
-                  ? s.convertTypes
-                  : [ConvertFormat.Webp],
-            })
-          }
-        />
+        <Select
+          value={currentFormat}
+          onValueChange={(v) => onChange({ convertTypes: [v as ConvertFormat] })}
+        >
+          <SelectTrigger className='h-8 w-[110px] shrink-0 text-xs'>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ConvertFormat.Webp} className='text-xs'>WebP</SelectItem>
+            <SelectItem value={ConvertFormat.Png} className='text-xs'>PNG</SelectItem>
+            <SelectItem value={ConvertFormat.Jpg} className='text-xs'>JPG</SelectItem>
+            <SelectItem value={ConvertFormat.Avif} className='text-xs'>AVIF</SelectItem>
+            <SelectItem value={ConvertFormat.Gif} className='text-xs'>GIF</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      {s.convertEnable && (
-        <div className='mt-3 space-y-3'>
-          <div className={ROW_CLASS}>
-            <Label className={LABEL_CLASS}>
-              {t('compression.options.convert.format_label')}
-            </Label>
-            <Select
-              value={s.convertTypes[0] ?? ConvertFormat.Webp}
-              onValueChange={(v) => onChange({ convertTypes: [v as ConvertFormat] })}
-            >
-              <SelectTrigger className='h-8 w-[120px] text-xs'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ConvertFormat.Webp} className='text-xs'>WebP</SelectItem>
-                <SelectItem value={ConvertFormat.Png} className='text-xs'>PNG</SelectItem>
-                <SelectItem value={ConvertFormat.Jpg} className='text-xs'>JPG</SelectItem>
-                <SelectItem value={ConvertFormat.Avif} className='text-xs'>AVIF</SelectItem>
-                <SelectItem value={ConvertFormat.Gif} className='text-xs'>GIF</SelectItem>
-              </SelectContent>
-            </Select>
+      {currentFormat === ConvertFormat.Jpg && (
+        <div className={cn(ROW_CLASS, 'mt-3')}>
+          <Label className={LABEL_CLASS}>
+            {t('page.compression.watch.folder.settings.convert_alpha')}
+          </Label>
+          <div className='flex items-center gap-2'>
+            <input
+              type='color'
+              value={s.convertAlpha}
+              onChange={(e) => onChange({ convertAlpha: e.target.value })}
+              className='h-7 w-10 cursor-pointer rounded border border-neutral-200 p-0.5'
+            />
+            <Input
+              value={s.convertAlpha}
+              onChange={(e) => onChange({ convertAlpha: e.target.value })}
+              className='h-7 w-[90px] text-xs'
+            />
           </div>
-          {(s.convertTypes[0] ?? ConvertFormat.Webp) === ConvertFormat.Jpg && (
-            <div className={ROW_CLASS}>
-              <Label className={LABEL_CLASS}>
-                {t('page.compression.watch.folder.settings.convert_alpha')}
-              </Label>
-              <div className='flex items-center gap-2'>
-                <input
-                  type='color'
-                  value={s.convertAlpha}
-                  onChange={(e) => onChange({ convertAlpha: e.target.value })}
-                  className='h-7 w-10 cursor-pointer rounded border border-neutral-200 p-0.5'
-                />
-                <Input
-                  value={s.convertAlpha}
-                  onChange={(e) => onChange({ convertAlpha: e.target.value })}
-                  className='h-7 w-[90px] text-xs'
-                />
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -343,15 +342,15 @@ export const ResizePanel = memo(function ResizePanel({
   const t = useI18n();
   const resizeMode: ResizeMode = s.resizeMode ?? ResizeMode.Scale;
 
-  const [widthInput, setWidthInput] = useState(String(s.resizeDimensions[0] || ''));
-  const [heightInput, setHeightInput] = useState(String(s.resizeDimensions[1] || ''));
+  const dimW = s.resizeDimensions[0];
+  const dimH = s.resizeDimensions[1];
+  const [widthInput, setWidthInput] = useState(String(dimW || ''));
+  const [heightInput, setHeightInput] = useState(String(dimH || ''));
   const [scaleInput, setScaleInput] = useState(String(s.resizeScale ?? 50));
 
-  useEffect(() => {
-    setWidthInput(String(s.resizeDimensions[0] || ''));
-    setHeightInput(String(s.resizeDimensions[1] || ''));
-    setScaleInput(String(s.resizeScale ?? 50));
-  }, [s.resizeDimensions, s.resizeScale]);
+  useEffect(() => { setWidthInput(String(dimW || '')); }, [dimW]);
+  useEffect(() => { setHeightInput(String(dimH || '')); }, [dimH]);
+  useEffect(() => { setScaleInput(String(s.resizeScale ?? 50)); }, [s.resizeScale]);
 
   const handleResizeBlur = () => {
     const w = parseInt(widthInput) || 0;
@@ -365,37 +364,29 @@ export const ResizePanel = memo(function ResizePanel({
         <p className='text-sm font-medium'>
           {t('page.compression.watch.folder.settings.resize')}
         </p>
-        <YesNoTabs
-          value={s.resizeEnable}
-          onChange={(enabled) => onChange({ resizeEnable: enabled })}
-        />
+        <Tabs
+          value={resizeMode}
+          activationMode='manual'
+          onValueChange={(v) => onChange({ resizeMode: v as ResizeMode })}
+        >
+          <TabsList className='flex h-8 w-[150px] shrink-0 rounded-full p-0'>
+            <TabsTrigger
+              value={ResizeMode.Scale}
+              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
+            >
+              {t('compression.options.resize.mode.scale')}
+            </TabsTrigger>
+            <TabsTrigger
+              value={ResizeMode.Custom}
+              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
+            >
+              {t('compression.options.resize.mode.custom')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
-      {s.resizeEnable && (
-        <div className='mt-3 space-y-3'>
-          {/* 模式切换 */}
-          <div className='flex gap-1.5'>
-            {([ResizeMode.Scale, ResizeMode.Custom] as ResizeMode[]).map((mode) => {
-              const active = resizeMode === mode;
-              return (
-                <button
-                  key={mode}
-                  type='button'
-                  onClick={() => onChange({ resizeMode: mode })}
-                  className={cn(
-                    'flex-1 rounded-full border py-1 text-xs font-medium transition-colors',
-                    active
-                      ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                      : 'border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500',
-                  )}
-                >
-                  {mode === ResizeMode.Scale
-                    ? t('compression.options.resize.mode.scale')
-                    : t('compression.options.resize.mode.custom')}
-                </button>
-              );
-            })}
-          </div>
 
+      <div className='mt-3 space-y-3'>
           {resizeMode === ResizeMode.Scale && (
             <div className={ROW_CLASS}>
               <Label className={LABEL_CLASS}>
@@ -494,7 +485,7 @@ export const ResizePanel = memo(function ResizePanel({
             </>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 });
@@ -506,7 +497,8 @@ export const WatermarkPanel = memo(function WatermarkPanel({
   onChange,
 }: FeaturePanelProps) {
   const t = useI18n();
-  const watermarkEnable: boolean = s.watermarkEnable;
+  // 若 watermarkType 为 None（初始/残留态），默认视为 Text
+  const effectiveType = s.watermarkType === WatermarkType.None ? WatermarkType.Text : s.watermarkType;
 
   const handleChooseWatermarkImage = async () => {
     const file = await open({
@@ -522,51 +514,31 @@ export const WatermarkPanel = memo(function WatermarkPanel({
         <p className='text-sm font-medium'>
           {t('page.compression.watch.folder.settings.watermark')}
         </p>
-        <YesNoTabs
-          value={watermarkEnable}
-          onChange={(enabled) =>
-            onChange({
-              watermarkEnable: enabled,
-              watermarkType: enabled
-                ? s.watermarkType !== WatermarkType.None
-                  ? s.watermarkType
-                  : WatermarkType.Text
-                : WatermarkType.None,
-            })
-          }
-        />
+        <Tabs
+          value={effectiveType}
+          activationMode='manual'
+          onValueChange={(v) => onChange({ watermarkType: v as WatermarkType })}
+        >
+          <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
+            <TabsTrigger
+              value={WatermarkType.Text}
+              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
+            >
+              {t('page.compression.watch.folder.settings.watermark_type_text')}
+            </TabsTrigger>
+            <TabsTrigger
+              value={WatermarkType.Image}
+              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
+            >
+              {t('page.compression.watch.folder.settings.watermark_type_image')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      {watermarkEnable && (
-        <div className='mt-3 space-y-4'>
-          {/* 水印类型选择 */}
-          <div className='flex gap-1.5'>
-            {([WatermarkType.Text, WatermarkType.Image] as WatermarkType[]).map((type) => {
-              const active =
-                (s.watermarkType === WatermarkType.None ? WatermarkType.Text : s.watermarkType) ===
-                type;
-              return (
-                <button
-                  key={type}
-                  type='button'
-                  onClick={() => onChange({ watermarkType: type })}
-                  className={cn(
-                    'flex-1 rounded-full border py-1 text-xs font-medium transition-colors',
-                    active
-                      ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                      : 'border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500',
-                  )}
-                >
-                  {type === WatermarkType.Text
-                    ? t('page.compression.watch.folder.settings.watermark_type_text')
-                    : t('page.compression.watch.folder.settings.watermark_type_image')}
-                </button>
-              );
-            })}
-          </div>
-
+      <div className='mt-3 space-y-4'>
           {/* 文字水印 */}
-          {(s.watermarkType === WatermarkType.Text || s.watermarkType === WatermarkType.None) && (
+          {effectiveType === WatermarkType.Text && (
             <div className='space-y-3'>
               <div className={ROW_CLASS}>
                 <Label className={LABEL_CLASS}>
@@ -620,7 +592,7 @@ export const WatermarkPanel = memo(function WatermarkPanel({
           )}
 
           {/* 图片水印 */}
-          {s.watermarkType === WatermarkType.Image && (
+          {effectiveType === WatermarkType.Image && (
             <div className='space-y-3'>
               <div className={ROW_CLASS}>
                 <Label className={LABEL_CLASS}>
@@ -688,15 +660,15 @@ export const WatermarkPanel = memo(function WatermarkPanel({
               value={s.watermarkPosition}
               onChange={(v) => onChange({ watermarkPosition: v })}
               previewText={
-                s.watermarkType !== WatermarkType.Image ? s.watermarkText || 'WM' : undefined
+                effectiveType !== WatermarkType.Image ? s.watermarkText || 'WM' : undefined
               }
               previewColor={
-                s.watermarkType !== WatermarkType.Image ? s.watermarkTextColor : undefined
+                effectiveType !== WatermarkType.Image ? s.watermarkTextColor : undefined
               }
             />
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 });

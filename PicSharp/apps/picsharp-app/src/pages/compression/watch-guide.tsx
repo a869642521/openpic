@@ -146,18 +146,19 @@ function WatchCompressionGuide() {
         return;
       }
 
-      const newHistory = await updateWatchHistory(path);
-      setHistory(newHistory);
       pendingAddPathRef.current = path;
       setAddModeDialogOpen(true);
     }
   };
 
-  const handleAddModeConfirm = (mode: WatchAddMode, _features: WatchFeature[], settings: WatchFolderSettings) => {
+  const handleAddModeConfirm = async (mode: WatchAddMode, _features: WatchFeature[], settings: WatchFolderSettings) => {
     const path = pendingAddPathRef.current;
     if (!path) return;
     setAddModeDialogOpen(false);
     pendingAddPathRef.current = null;
+
+    const newHistory = await updateWatchHistory(path);
+    setHistory(newHistory);
 
     const newFolder: WatchFolder = {
       id: `watch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,

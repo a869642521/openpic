@@ -271,8 +271,8 @@ const FolderStatusBadge = memo(function FolderStatusBadge({
 
 const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder }) {
   const t = useI18n();
-  const { removeWatchFolder, updateWatchFolderSettings, updateWatchFolderStatus } = useCompressionStore(
-    useSelector(['removeWatchFolder', 'updateWatchFolderSettings', 'updateWatchFolderStatus']),
+  const { removeWatchFolder, updateWatchFolderStatus } = useCompressionStore(
+    useSelector(['removeWatchFolder', 'updateWatchFolderStatus']),
   );
   const { startWatching, stopWatching } = useContext(WatchContext);
   const [settingsOpen, setSettingsOpen] = useState(false);

@@ -16,37 +16,19 @@ import {
   ConvertPanel,
   ResizePanel,
   WatermarkPanel,
+  ALL_FEATURES,
+  FEATURE_ENABLE_KEYS,
+  isFeatureEnabled,
+  type WatchFeature,
 } from './watch-feature-panels';
 
 export type WatchAddMode = 'monitor_only' | 'compress_then_monitor';
-export type WatchFeature = 'compression' | 'resize' | 'watermark' | 'convert';
+export type { WatchFeature };
 
 interface WatchAddModeDialogProps {
   open: boolean;
   onConfirm: (mode: WatchAddMode, features: WatchFeature[], settings: WatchFolderSettings) => void;
   onCancel?: () => void;
-}
-
-const ALL_FEATURES: WatchFeature[] = ['compression', 'resize', 'watermark', 'convert'];
-
-const FEATURE_ENABLE_KEYS: Record<WatchFeature, keyof WatchFolderSettings> = {
-  compression: 'compressionEnable',
-  resize: 'resizeEnable',
-  watermark: 'watermarkEnable',
-  convert: 'convertEnable',
-};
-
-function isFeatureEnabled(feature: WatchFeature, settings: WatchFolderSettings): boolean {
-  switch (feature) {
-    case 'compression':
-      return settings.compressionEnable !== false;
-    case 'resize':
-      return settings.resizeEnable;
-    case 'watermark':
-      return settings.watermarkEnable;
-    case 'convert':
-      return settings.convertEnable;
-  }
 }
 
 function WatchAddModeDialog({ open, onConfirm, onCancel }: WatchAddModeDialogProps) {
@@ -169,6 +151,13 @@ function WatchAddModeDialog({ open, onConfirm, onCancel }: WatchAddModeDialogPro
               })}
             </div>
           </div>
+
+          {/* monitor_only + 功能启用时的补充说明 */}
+          {selectedMode === 'monitor_only' && ALL_FEATURES.some((f) => isFeatureEnabled(f, localSettings)) && (
+            <p className='rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'>
+              {t('page.compression.watch.guide.add_mode_monitor_only_feature_hint')}
+            </p>
+          )}
 
           {/* 启用功能 */}
           <div className='flex flex-col gap-2'>
