@@ -4,11 +4,12 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import useAppStore from './app';
 import { clearImageViewerCache } from '@/components/image-viewer/cache';
 import { normalizePathForCompare } from '@/utils/fs';
-import { ConvertFormat, ResizeFit, WatermarkType, WatermarkPosition, TinypngMetadata } from '@/constants';
+import { ConvertFormat, ResizeFit, ResizeMode, WatermarkType, WatermarkPosition, TinypngMetadata } from '@/constants';
 
 export type CompressionModeType = 'classic' | 'watch';
 
 export const defaultWatchFolderSettings: WatchFolderSettings = {
+  compressionEnable: true,
   sizeFilterEnable: false,
   sizeFilterValue: 500,
   preserveMetadata: [],
@@ -16,8 +17,11 @@ export const defaultWatchFolderSettings: WatchFolderSettings = {
   convertTypes: [] as ConvertFormat[],
   convertAlpha: '#ffffff',
   resizeEnable: false,
+  resizeMode: ResizeMode.Scale,
+  resizeScale: 50,
   resizeDimensions: [0, 0],
   resizeFit: ResizeFit.Inside,
+  watermarkEnable: false,
   watermarkType: WatermarkType.None,
   watermarkText: '',
   watermarkTextColor: '#ffffff',
@@ -129,12 +133,15 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   },
 
   removeWatchFolder: (id: string) => {
-    const { watchFolders, watchFiles, mode } = get();
+    const { watchFolders, watchFiles, watchSelectedFiles, mode } = get();
     const newFolders = watchFolders.filter((f) => f.id !== id);
-    // Also remove all files belonging to this folder
     const newFiles = watchFiles.filter((f) => f.watchFolderId !== id);
     const fileMap = new Map(newFiles.map((f) => [f.path, f]));
-    const selectedFiles = newFiles.map((f) => f.path);
+    // 保留当前选中状态，仅移除属于被删除文件夹的条目
+    const removedPaths = new Set(
+      watchFiles.filter((f) => f.watchFolderId === id).map((f) => f.path),
+    );
+    const selectedFiles = watchSelectedFiles.filter((p) => !removedPaths.has(p));
     const patch: Partial<CompressionState> = {
       watchFolders: newFolders,
       watchFiles: newFiles,
@@ -242,8 +249,10 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   },
 
   appendWatchFiles: (newFiles: FileInfo[]) => {
-    const { watchFiles, mode } = get();
-    const merged = [...watchFiles, ...newFiles];
+    const { watchFiles, watchFileMap, mode } = get();
+    const uniqueNew = newFiles.filter((f) => !watchFileMap.has(f.path));
+    if (uniqueNew.length === 0) return;
+    const merged = [...watchFiles, ...uniqueNew];
     const fileMap = new Map(merged.map((file) => [file.path, file]));
     const selectedFiles = merged.map((file) => file.path);
     const patch: Partial<CompressionState> = {
@@ -387,6 +396,12 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
     set({
       working: false,
       watchFolders: [],
+      watchFiles: [],
+      watchFileMap: new Map(),
+      watchSelectedFiles: [],
+      files: [],
+      fileMap: new Map(),
+      selectedFiles: [],
     });
   },
 }));

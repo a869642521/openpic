@@ -1,5 +1,5 @@
 import type { ICompressor } from '../utils/compressor';
-import type { CompressionOutputMode, ConvertFormat, ResizeFit, WatermarkType } from '../constants';
+import type { CompressionOutputMode, ConvertFormat, ResizeFit, ResizeMode, WatermarkType } from '../constants';
 import type { TinypngMetadata } from '../constants';
 
 declare global {
@@ -19,6 +19,7 @@ declare global {
   }
 
   interface WatchFolderSettings {
+    compressionEnable: boolean;
     sizeFilterEnable: boolean;
     sizeFilterValue: number;
     preserveMetadata: TinypngMetadata[];
@@ -26,8 +27,11 @@ declare global {
     convertTypes: ConvertFormat[];
     convertAlpha: string;
     resizeEnable: boolean;
+    resizeMode: ResizeMode;
+    resizeScale: number;
     resizeDimensions: [number, number];
     resizeFit: ResizeFit;
+    watermarkEnable: boolean;
     watermarkType: WatermarkType;
     watermarkText: string;
     watermarkTextColor: string;

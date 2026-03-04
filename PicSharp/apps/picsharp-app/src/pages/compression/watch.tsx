@@ -14,7 +14,7 @@ import { parsePaths, humanSize, normalizePathForCompare } from '@/utils/fs';
 import { VALID_IMAGE_EXTS } from '@/constants';
 import { isValidArray, correctFloat } from '@/utils';
 import Compressor, { ICompressor } from '@/utils/compressor';
-import { SettingsKey, TinypngMetadata } from '@/constants';
+import { SettingsKey, TinypngMetadata, ResizeMode } from '@/constants';
 import { isString } from 'radash';
 import { useI18n } from '@/i18n';
 import useSettingsStore from '@/store/settings';
@@ -88,6 +88,8 @@ function CompressionWatch() {
         convertTypes,
         convertAlpha,
         resizeEnable,
+        resizeMode,
+        resizeScale,
         resizeDimensions,
         resizeFit,
         watermarkType,
@@ -120,6 +122,7 @@ function CompressionWatch() {
         convertAlpha,
         resizeDimensions,
         resizeEnable,
+        resizeScale: (resizeMode ?? ResizeMode.Scale) === ResizeMode.Scale ? (resizeScale ?? 50) : 0,
         resizeFit,
         watermarkType,
         watermarkPosition,
@@ -231,7 +234,10 @@ function CompressionWatch() {
       const folder = getFolderSettings(folderId);
       if (!folder) return;
 
-      const { sizeFilterEnable, sizeFilterValue } = folder.settings;
+      const { sizeFilterEnable, sizeFilterValue, compressionEnable } = folder.settings;
+
+      // 压缩未开启时，不处理新增文件
+      if (compressionEnable === false) return;
 
       parsePaths(paths, VALID_IMAGE_EXTS)
         .then((candidates) => {
@@ -429,20 +435,20 @@ function CompressionWatch() {
       onerror(error) {
         console.log(`[Watch] SSE error for ${folder.path}`, error);
         captureError(error);
-        setTimeout(() => {
-          if (!ctrl.signal.aborted) {
-            updateWatchFolderStatus(folder.id, 'error');
-            const isFirst = isFirstInitRef.current.get(folder.id) ?? true;
-            alert(isFirst ? t('tips.watch_service_startup_failed') : t('tips.file_watch_abort'));
-            getCurrentWebviewWindow().show();
-            getCurrentWebviewWindow().setFocus();
-            checkAndRegainIfEmpty();
-          }
-        }, 1000);
+        // 必须中止并抛出，否则 fetch-event-source 会无限重试
+        ctrl.abort();
+        updateWatchFolderStatus(folder.id, 'error');
+        const isFirst = isFirstInitRef.current.get(folder.id) ?? true;
+        alert(isFirst ? t('tips.watch_service_startup_failed') : t('tips.file_watch_abort'));
+        getCurrentWebviewWindow().show();
+        getCurrentWebviewWindow().setFocus();
+        checkAndRegainIfEmpty();
+        throw error;
       },
       onclose() {
         console.log(`[Watch] SSE closed for ${folder.path}`);
         if (!ctrl.signal.aborted) {
+          ctrl.abort();
           updateWatchFolderStatus(folder.id, 'stopped');
           const isFirst = isFirstInitRef.current.get(folder.id) ?? true;
           alert(isFirst ? t('tips.watch_service_startup_failed') : t('tips.file_watch_abort'));
@@ -460,6 +466,8 @@ function CompressionWatch() {
     sseControllersRef.current.delete(folderId);
     queuesRef.current.delete(folderId);
     throttledProcessorsRef.current.delete(folderId);
+    historysRef.current.delete(folderId);
+    isFirstInitRef.current.delete(folderId);
   }, []);
 
   /** 如果所有文件夹都已停止/错误，返回引导页 */

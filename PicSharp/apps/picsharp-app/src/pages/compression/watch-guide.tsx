@@ -1,7 +1,7 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import useSelector from '@/hooks/useSelector';
 import { FolderClock, Plus } from 'lucide-react';
-import useCompressionStore, { defaultWatchFolderSettings } from '../../store/compression';
+import useCompressionStore from '../../store/compression';
 import { useNavigate } from '@/hooks/useNavigate';
 import { useI18n } from '@/i18n';
 import { useEffect, useState, useContext, useRef } from 'react';
@@ -22,7 +22,7 @@ import FormatsTips from './formats-tips';
 import { useReport } from '@/hooks/useReport';
 import { openSettingsWindow } from '@/utils/window';
 import { message } from '@/components/message';
-import WatchAddModeDialog, { WatchAddMode } from './watch-add-mode-dialog';
+import WatchAddModeDialog, { WatchAddMode, WatchFeature } from './watch-add-mode-dialog';
 import { detectFolderOverlap } from '@/utils/watch-utils';
 
 const WATCH_HISTORY_KEY = 'compression_watch_history';
@@ -153,7 +153,7 @@ function WatchCompressionGuide() {
     }
   };
 
-  const handleAddModeSelect = (mode: WatchAddMode) => {
+  const handleAddModeConfirm = (mode: WatchAddMode, _features: WatchFeature[], settings: WatchFolderSettings) => {
     const path = pendingAddPathRef.current;
     if (!path) return;
     setAddModeDialogOpen(false);
@@ -164,7 +164,7 @@ function WatchCompressionGuide() {
       path,
       addMode: mode,
       status: 'monitoring',
-      settings: { ...defaultWatchFolderSettings },
+      settings,
       stats: null,
     };
 
@@ -185,16 +185,15 @@ function WatchCompressionGuide() {
     if (isExists) {
       if (targetIndex !== -1) {
         const name = history[targetIndex].name;
-        history.splice(targetIndex, 1);
-        const newHistory = [{ name, path }, ...history];
+        const newHistory = [{ name, path }, ...history.filter((_, i) => i !== targetIndex)];
         localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(newHistory));
         setHistory(newHistory);
       }
       handleWatch(path);
     } else {
-      history.splice(targetIndex, 1);
-      localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(history));
-      setHistory([...history]);
+      const newHistory = history.filter((_, i) => i !== targetIndex);
+      localStorage.setItem(WATCH_HISTORY_KEY, JSON.stringify(newHistory));
+      setHistory(newHistory);
       messageApi?.error(t('tips.file_not_exists'));
     }
   };
@@ -234,6 +233,9 @@ function WatchCompressionGuide() {
       setHistory(arr);
     }
     setupDragDrop();
+    return () => {
+      dragDropController.current?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -310,7 +312,7 @@ function WatchCompressionGuide() {
       </div>
       <WatchAddModeDialog
         open={addModeDialogOpen}
-        onSelect={handleAddModeSelect}
+        onConfirm={handleAddModeConfirm}
         onCancel={handleAddModeCancel}
       />
     </div>

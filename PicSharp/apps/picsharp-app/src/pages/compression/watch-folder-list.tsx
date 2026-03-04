@@ -1,15 +1,13 @@
 import { memo, useContext, useState, useRef, useMemo } from 'react';
 import { useI18n } from '@/i18n';
-import useCompressionStore, { defaultWatchFolderSettings } from '@/store/compression';
+import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';
 import { AppContext } from '@/routes';
 import { WatchContext } from './watch';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { humanSize, parseSizeToKb } from '@/utils/fs';
+import { humanSize } from '@/utils/fs';
 import {
-  Filter,
   Folder,
   Trash2,
   Settings2,
@@ -32,7 +30,7 @@ import { isValidArray, preventDefault } from '@/utils';
 import useAppStore from '@/store/app';
 import { openSettingsWindow } from '@/utils/window';
 import { detectFolderOverlap } from '@/utils/watch-utils';
-import WatchAddModeDialog, { WatchAddMode } from './watch-add-mode-dialog';
+import WatchAddModeDialog, { WatchAddMode, WatchFeature } from './watch-add-mode-dialog';
 import WatchFolderSettingsDialog from './watch-folder-settings-dialog';
 import FileCard from './file-card';
 import { ICompressor } from '@/utils/compressor';
@@ -99,15 +97,186 @@ const FolderFileGrid = memo(function FolderFileGrid({ folderId }: { folderId: st
   );
 });
 
+type FeatureSection = 'compression' | 'resize' | 'watermark' | 'convert';
+
+/** 功能标签行：始终显示全部 4 个功能，点击定向到设置区块 */
+const FeatureTagRow = memo(function FeatureTagRow({
+  folder,
+  onTagClick,
+}: {
+  folder: WatchFolder;
+  onTagClick: (section: FeatureSection) => void;
+}) {
+  const t = useI18n();
+  const s = folder.settings;
+
+  const compressionActive = s.compressionEnable !== false;
+  const compressionSummary = compressionActive && s.sizeFilterEnable
+    ? `>${s.sizeFilterValue ?? 500}KB`
+    : undefined;
+
+  const resizeActive = s.resizeEnable;
+  const resizeSummary = resizeActive
+    ? s.resizeMode === 'scale'
+      ? `${s.resizeScale ?? 50}%`
+      : s.resizeDimensions?.[0] || s.resizeDimensions?.[1]
+        ? `${s.resizeDimensions[0] || 'auto'}×${s.resizeDimensions[1] || 'auto'}`
+        : undefined
+    : undefined;
+
+  const watermarkActive = s.watermarkEnable;
+  const watermarkSummary = watermarkActive
+    ? s.watermarkType === 'text'
+      ? t('page.compression.watch.folder.settings.watermark_type_text')
+      : s.watermarkType === 'image'
+        ? t('page.compression.watch.folder.settings.watermark_type_image')
+        : undefined
+    : undefined;
+
+  const convertActive = s.convertEnable;
+  const convertSummary = convertActive && s.convertTypes?.length > 0
+    ? s.convertTypes[0]?.toUpperCase()
+    : undefined;
+
+  const tags: { section: FeatureSection; label: string; summary?: string; active: boolean }[] = [
+    {
+      section: 'compression',
+      label: t('page.compression.watch.guide.feature.compression'),
+      summary: compressionSummary,
+      active: compressionActive,
+    },
+    {
+      section: 'resize',
+      label: t('page.compression.watch.folder.settings.resize'),
+      summary: resizeSummary,
+      active: resizeActive,
+    },
+    {
+      section: 'watermark',
+      label: t('page.compression.watch.folder.settings.watermark'),
+      summary: watermarkSummary,
+      active: watermarkActive,
+    },
+    {
+      section: 'convert',
+      label: t('page.compression.watch.folder.settings.convert'),
+      summary: convertSummary,
+      active: convertActive,
+    },
+  ];
+
+  return (
+    <div
+      className='flex flex-wrap gap-1.5 border-t border-neutral-100 px-4 py-2 dark:border-neutral-700/50'
+      onClick={(e) => e.stopPropagation()}
+    >
+      {tags.map(({ section, label, summary, active }) => (
+        <button
+          key={section}
+          type='button'
+          onClick={() => onTagClick(section)}
+          className={cn(
+            'inline-flex h-6 items-center gap-1 rounded-full border px-2.5 text-xs transition-colors',
+            active
+              ? 'border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:border-blue-700'
+              : 'border-neutral-200 bg-neutral-50 text-neutral-300 hover:border-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-600 dark:hover:text-neutral-500',
+          )}
+        >
+          <span
+            className={cn(
+              'h-1.5 w-1.5 shrink-0 rounded-full',
+              active
+                ? 'bg-blue-500 dark:bg-blue-400'
+                : 'bg-neutral-300 dark:bg-neutral-600',
+            )}
+          />
+          {label}
+          {summary && (
+            <span
+              className={cn(
+                'rounded px-1 text-[10px]',
+                active
+                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300'
+                  : 'bg-neutral-200/70 dark:bg-neutral-700',
+              )}
+            >
+              {summary}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+});
+
 /** 单个可折叠的监听文件夹卡片 */
+const BADGE_BASE = 'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-opacity';
+
+const FolderStatusBadge = memo(function FolderStatusBadge({
+  status,
+  isToggleable,
+  onToggle,
+}: {
+  status: WatchFolder['status'];
+  isToggleable: boolean;
+  onToggle: () => void;
+}) {
+  const t = useI18n();
+  const clickableClass = isToggleable ? 'cursor-pointer hover:opacity-80 active:opacity-60' : 'cursor-default';
+
+  if (status === 'monitoring') {
+    return (
+      <Badge
+        variant='processing'
+        className={cn(BADGE_BASE, clickableClass)}
+        onClick={onToggle}
+        title={t('page.compression.watch.card.click_to_pause')}
+      >
+        <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-current' />
+        {t('page.compression.watch.card.monitoring')}
+      </Badge>
+    );
+  }
+  if (status === 'paused') {
+    return (
+      <Badge
+        className={cn(
+          BADGE_BASE,
+          clickableClass,
+          'border-orange-200 bg-orange-50 text-orange-600 dark:border-orange-700/50 dark:bg-orange-950/40 dark:text-orange-400',
+        )}
+        onClick={onToggle}
+        title={t('page.compression.watch.card.click_to_resume')}
+      >
+        <span className='h-1.5 w-1.5 rounded-full bg-current' />
+        {t('page.compression.watch.card.paused')}
+      </Badge>
+    );
+  }
+  if (status === 'error') {
+    return (
+      <Badge variant='destructive' className={cn(BADGE_BASE, 'cursor-default')}>
+        <AlertCircle className='h-3 w-3' />
+        {t('common.error')}
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant='secondary' className={cn(BADGE_BASE, 'cursor-default')}>
+      <StopCircle className='h-3 w-3' />
+      {t('common.stopped')}
+    </Badge>
+  );
+});
+
 const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder }) {
   const t = useI18n();
   const { removeWatchFolder, updateWatchFolderSettings, updateWatchFolderStatus } = useCompressionStore(
     useSelector(['removeWatchFolder', 'updateWatchFolderSettings', 'updateWatchFolderStatus']),
   );
   const { startWatching, stopWatching } = useContext(WatchContext);
-  const [filterInput, setFilterInput] = useState(() => String(folder.settings.sizeFilterValue));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<FeatureSection | undefined>(undefined);
   const [expanded, setExpanded] = useState(true);
 
   const handleToggleMonitor = () => {
@@ -125,19 +294,6 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
   const isScanFailed = folder.stats !== null && 'failed' in folder.stats;
   const hasStats = folder.stats !== null && 'totalCount' in folder.stats;
 
-  const handleFilterToggle = () => {
-    updateWatchFolderSettings(folder.id, {
-      sizeFilterEnable: !folder.settings.sizeFilterEnable,
-    });
-  };
-
-  const handleFilterBlur = () => {
-    const kb = parseSizeToKb(filterInput);
-    const final = kb >= 1 ? kb : 500;
-    updateWatchFolderSettings(folder.id, { sizeFilterValue: final });
-    setFilterInput(String(final));
-  };
-
   const handleRemove = async () => {
     const result = await message.confirm({
       title: t('page.compression.watch.folder.remove_confirm_title'),
@@ -151,63 +307,6 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
   const handleOpenFolder = () => openPath(folder.path);
 
   const isToggleable = folder.status === 'monitoring' || folder.status === 'paused';
-
-  const StatusBadge = () => {
-    const baseClass = 'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-opacity';
-    const clickableClass = isToggleable
-      ? 'cursor-pointer hover:opacity-80 active:opacity-60'
-      : 'cursor-default';
-
-    if (folder.status === 'monitoring') {
-      return (
-        <Badge
-          variant='processing'
-          className={cn(baseClass, clickableClass)}
-          onClick={handleToggleMonitor}
-          title={t('page.compression.watch.card.click_to_pause')}
-        >
-          <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-current' />
-          {t('page.compression.watch.card.monitoring')}
-        </Badge>
-      );
-    }
-    if (folder.status === 'paused') {
-      return (
-        <Badge
-          className={cn(
-            baseClass,
-            clickableClass,
-            'border-orange-200 bg-orange-50 text-orange-600 dark:border-orange-700/50 dark:bg-orange-950/40 dark:text-orange-400',
-          )}
-          onClick={handleToggleMonitor}
-          title={t('page.compression.watch.card.click_to_resume')}
-        >
-          <span className='h-1.5 w-1.5 rounded-full bg-current' />
-          {t('page.compression.watch.card.paused')}
-        </Badge>
-      );
-    }
-    if (folder.status === 'error') {
-      return (
-        <Badge
-          variant='destructive'
-          className={cn(baseClass, 'cursor-default')}
-        >
-          <AlertCircle className='h-3 w-3' />
-          {t('common.error')}
-        </Badge>
-      );
-    }
-    return (
-      <Badge
-        variant='secondary'
-        className={cn(baseClass, 'cursor-default')}
-      >
-        <StopCircle className='h-3 w-3' />
-        {t('common.stopped')}
-      </Badge>
-    );
-  };
 
   return (
     <div
@@ -232,7 +331,11 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
 
         {/* 监听状态 */}
         <span onClick={(e) => e.stopPropagation()}>
-          <StatusBadge />
+          <FolderStatusBadge
+                status={folder.status}
+                isToggleable={isToggleable}
+                onToggle={handleToggleMonitor}
+              />
         </span>
 
         {/* 文件夹名 */}
@@ -300,67 +403,6 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
           )}
         </div>
 
-        {/* 大小过滤（阻止折叠事件冒泡） */}
-        <div
-          className='flex shrink-0 items-center gap-1.5'
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type='button'
-                onClick={handleFilterToggle}
-                className={cn(
-                  'inline-flex h-6 items-center gap-1 rounded border px-2 text-xs transition-colors',
-                  folder.settings.sizeFilterEnable
-                    ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
-                    : 'border-neutral-200 bg-neutral-50 text-neutral-400 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-500',
-                )}
-              >
-                <Filter className='h-2.5 w-2.5 shrink-0' />
-                {t('page.compression.watch.card.enable_filter')}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {folder.settings.sizeFilterEnable
-                ? t('page.compression.watch.card.filter_enabled_tip')
-                : t('page.compression.watch.card.filter_disabled_tip')}
-            </TooltipContent>
-          </Tooltip>
-          <div
-            className={cn(
-              'flex h-6 items-center gap-1 rounded border px-1.5',
-              folder.settings.sizeFilterEnable
-                ? 'border-blue-200 bg-white dark:border-blue-800 dark:bg-neutral-900/80'
-                : 'cursor-not-allowed border-neutral-200 bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800',
-            )}
-          >
-            <Input
-              type='text'
-              value={filterInput}
-              placeholder='500'
-              onChange={(e) => setFilterInput(e.target.value)}
-              onBlur={handleFilterBlur}
-              disabled={!folder.settings.sizeFilterEnable}
-              className={cn(
-                'h-4 min-w-0 max-w-[48px] border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0',
-                !folder.settings.sizeFilterEnable &&
-                  'cursor-not-allowed text-neutral-300 dark:text-neutral-600',
-              )}
-            />
-            <span
-              className={cn(
-                'shrink-0 text-xs',
-                folder.settings.sizeFilterEnable
-                  ? 'text-neutral-400'
-                  : 'text-neutral-300 dark:text-neutral-600',
-              )}
-            >
-              KB
-            </span>
-          </div>
-        </div>
-
         {/* 右侧操作按钮 (阻止折叠冒泡) */}
         <div
           className='ml-auto flex shrink-0 items-center gap-0.5'
@@ -395,6 +437,15 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
         </div>
       </div>
 
+      {/* 功能标签行 */}
+      <FeatureTagRow
+        folder={folder}
+        onTagClick={(section) => {
+          setSettingsSection(section);
+          setSettingsOpen(true);
+        }}
+      />
+
       {/* 展开时显示文件网格 */}
       {expanded && (
         <>
@@ -407,7 +458,11 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
       <WatchFolderSettingsDialog
         open={settingsOpen}
         folder={folder}
-        onClose={() => setSettingsOpen(false)}
+        initialSection={settingsSection}
+        onClose={() => {
+          setSettingsOpen(false);
+          setSettingsSection(undefined);
+        }}
       />
     </div>
   );
@@ -482,7 +537,7 @@ function WatchFolderList() {
     setAddModeDialogOpen(true);
   };
 
-  const handleAddModeSelect = (mode: WatchAddMode) => {
+  const handleAddModeConfirm = (mode: WatchAddMode, _features: WatchFeature[], settings: WatchFolderSettings) => {
     const path = pendingPathRef.current;
     if (!path) return;
     setAddModeDialogOpen(false);
@@ -493,7 +548,7 @@ function WatchFolderList() {
       path,
       addMode: mode,
       status: 'monitoring',
-      settings: { ...defaultWatchFolderSettings },
+      settings,
       stats: null,
     };
 
@@ -513,10 +568,9 @@ function WatchFolderList() {
         onClick={() => handleAddFolder()}
         className={cn(
           'flex items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm',
-          'border-neutral-200 text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-600',
-          'dark:border-neutral-600 dark:text-neutral-500 dark:hover:border-neutral-500 dark:hover:text-neutral-300',
+          'border-neutral-200 bg-neutral-100 text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-600',
+          'dark:border-neutral-600 dark:bg-neutral-800/60 dark:text-neutral-500 dark:hover:border-neutral-500 dark:hover:text-neutral-300',
         )}
-        style={{ backgroundColor: 'rgb(236, 237, 238)' }}
       >
         <Plus className='h-4 w-4' />
         {t('page.compression.watch.folder.add')}
@@ -524,7 +578,7 @@ function WatchFolderList() {
 
       <WatchAddModeDialog
         open={addModeDialogOpen}
-        onSelect={handleAddModeSelect}
+        onConfirm={handleAddModeConfirm}
         onCancel={() => {
           setAddModeDialogOpen(false);
           pendingPathRef.current = null;
