@@ -178,6 +178,13 @@ export default {
   'settings.compression.resize.fit.option.fill': '填充（Fill）',
   'settings.compression.resize.fit.option.inside': '内部（Inside）',
   'settings.compression.resize.fit.option.outside': '外部（Outside）',
+  'compression.options.resize.dimensions_label': '尺寸',
+  'compression.options.resize.fit.name.cover': '覆盖',
+  'compression.options.resize.fit.name.fill': '填充',
+  'compression.options.resize.fit.name.contain': '包含',
+  'compression.options.resize.fit.desc.cover': '等比缩放，超出裁剪',
+  'compression.options.resize.fit.desc.fill': '拉伸填满，可能变形',
+  'compression.options.resize.fit.desc.contain': '完整显示，留有空白',
   // Settings.Compression.FileIgnore
   'settings.compression.file_ignore.title': '忽略文件',
   'settings.compression.file_ignore.description':

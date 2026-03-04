@@ -1,4 +1,4 @@
-import { memo, useContext, useState, useRef, useMemo } from 'react';
+﻿import { memo, useContext, useState, useRef, useMemo } from 'react';
 import { useI18n } from '@/i18n';
 import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';
@@ -14,7 +14,6 @@ import {
   Plus,
   AlertCircle,
   StopCircle,
-  ChevronDown,
   ChevronRight,
   ImagePlus,
 } from 'lucide-react';
@@ -166,10 +165,7 @@ const FeatureTagRow = memo(function FeatureTagRow({
   ];
 
   return (
-    <div
-      className='flex flex-wrap gap-1.5 border-t border-neutral-100 px-4 py-2 dark:border-neutral-700/50'
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className='flex flex-wrap gap-1.5'>
       {tags.map(({ section, label, summary, active }) => (
         <button
           key={section}
@@ -315,99 +311,104 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
         'dark:border-neutral-600/80 dark:bg-neutral-800/90',
       )}
     >
-      {/* 卡片标题行（始终显示，可点击折叠/展开） */}
+      {/* 卡片标题行 */}
       <div
-        className='flex h-[70px] flex-wrap items-center gap-[14px] px-4 cursor-pointer select-none hover:bg-neutral-50/60 dark:hover:bg-neutral-700/20 transition-colors'
+        className='flex h-[64px] items-center gap-3 px-4 cursor-pointer select-none transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-700/30'
         onClick={() => setExpanded((v) => !v)}
       >
-        {/* 折叠 chevron */}
-        <span className='shrink-0 text-neutral-400 dark:text-neutral-500'>
-          {expanded ? (
-            <ChevronDown className='h-4 w-4' />
-          ) : (
-            <ChevronRight className='h-4 w-4' />
+        {/* Chevron - 旋转动画 */}
+        <ChevronRight
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 text-neutral-300 transition-transform duration-200 dark:text-neutral-600',
+            expanded && 'rotate-90',
           )}
-        </span>
+        />
 
-        {/* 监听状态 */}
-        <span onClick={(e) => e.stopPropagation()}>
-          <FolderStatusBadge
-                status={folder.status}
-                isToggleable={isToggleable}
-                onToggle={handleToggleMonitor}
-              />
-        </span>
-
-        {/* 文件夹名 */}
-        <div className='flex min-w-0 shrink-0 items-center gap-1.5'>
-          <Folder className='h-3.5 w-3.5 shrink-0 text-amber-500 dark:text-amber-400' />
+        {/* 文件夹名 + 状态 badge */}
+        <div className='flex shrink-0 items-center gap-2'>
+          <Folder className='h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400' />
           <span
-            className='max-w-[120px] truncate text-sm font-semibold text-neutral-800 dark:text-neutral-100'
+            className='max-w-[140px] truncate text-sm font-semibold text-neutral-800 dark:text-neutral-100'
             title={folderName}
           >
             {folderName}
           </span>
+          <span onClick={(e) => e.stopPropagation()}>
+            <FolderStatusBadge
+              status={folder.status}
+              isToggleable={isToggleable}
+              onToggle={handleToggleMonitor}
+            />
+          </span>
         </div>
 
-        {/* 文件地址（可点击，阻止折叠事件冒泡） */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type='button'
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenFolder();
-              }}
-              className='w-[200px] min-w-[200px] shrink-0 truncate text-left text-xs text-blue-500 underline-offset-2 hover:underline dark:text-blue-400'
-              title={folder.path}
-            >
-              {folder.path}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className='max-w-[320px] break-all'>{folder.path}</p>
-            <p className='mt-1 text-xs text-neutral-400'>
-              {t('page.compression.watch.card.open_folder_tip')}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-
-        {/* 文件统计 */}
+        {/* 路径 + 文件统计（flex-1，垂直） */}
         <div
-          className='flex shrink-0 items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500'
+          className='flex min-w-0 flex-1 flex-col gap-0.5'
           onClick={(e) => e.stopPropagation()}
         >
-          {isScanning && (
-            <span className='flex items-center gap-1'>
-              <span className='inline-block h-1.5 w-1.5 animate-spin rounded-full border border-current border-t-transparent' />
-              {t('page.compression.watch.card.scanning')}
-            </span>
-          )}
-          {isScanFailed && (
-            <span className='text-red-400'>{t('page.compression.watch.card.scan_failed')}</span>
-          )}
-          {hasStats && (folder.stats as { totalCount: number; totalBytes: number }).totalCount > 0 && (
-            <>
-              <span>
-                {t('page.compression.watch.card.file_count', {
-                  count: (folder.stats as { totalCount: number }).totalCount,
-                })}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type='button'
+                onClick={(e) => { e.stopPropagation(); handleOpenFolder(); }}
+                className='truncate text-left text-xs text-neutral-400 transition-colors hover:text-blue-500 dark:text-neutral-500 dark:hover:text-blue-400'
+                title={folder.path}
+              >
+                {folder.path}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className='max-w-[320px] break-all'>{folder.path}</p>
+              <p className='mt-1 text-xs text-neutral-400'>
+                {t('page.compression.watch.card.open_folder_tip')}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+          <div className='flex items-center gap-1 text-[11px] text-neutral-300 dark:text-neutral-600'>
+            {isScanning && (
+              <span className='flex items-center gap-1 text-neutral-400'>
+                <span className='inline-block h-1.5 w-1.5 animate-spin rounded-full border border-current border-t-transparent' />
+                {t('page.compression.watch.card.scanning')}
               </span>
-              <span className='text-neutral-300 dark:text-neutral-600'>·</span>
-              <span>
-                {t('page.compression.watch.card.file_size', {
-                  size: humanSize((folder.stats as { totalBytes: number }).totalBytes),
-                })}
-              </span>
-            </>
-          )}
+            )}
+            {isScanFailed && (
+              <span className='text-red-400'>{t('page.compression.watch.card.scan_failed')}</span>
+            )}
+            {hasStats && (folder.stats as { totalCount: number; totalBytes: number }).totalCount > 0 && (
+              <>
+                <span className='text-neutral-400 dark:text-neutral-500'>
+                  {t('page.compression.watch.card.file_count', {
+                    count: (folder.stats as { totalCount: number }).totalCount,
+                  })}
+                </span>
+                <span>·</span>
+                <span className='text-neutral-400 dark:text-neutral-500'>
+                  {t('page.compression.watch.card.file_size', {
+                    size: humanSize((folder.stats as { totalBytes: number }).totalBytes),
+                  })}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* 右侧操作按钮 (阻止折叠冒泡) */}
-        <div
-          className='ml-auto flex shrink-0 items-center gap-0.5'
-          onClick={(e) => e.stopPropagation()}
-        >
+        {/* 功能标签 */}
+        <div className='flex shrink-0 flex-wrap justify-end gap-1.5' onClick={(e) => e.stopPropagation()}>
+          <FeatureTagRow
+            folder={folder}
+            onTagClick={(section) => {
+              setSettingsSection(section);
+              setSettingsOpen(true);
+            }}
+          />
+        </div>
+
+        {/* 竖线分隔 */}
+        <div className='h-5 w-px shrink-0 bg-neutral-100 dark:bg-neutral-700' />
+
+        {/* 操作按钮 */}
+        <div className='flex shrink-0 items-center gap-0.5' onClick={(e) => e.stopPropagation()}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -436,15 +437,6 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
           </Tooltip>
         </div>
       </div>
-
-      {/* 功能标签行 */}
-      <FeatureTagRow
-        folder={folder}
-        onTagClick={(section) => {
-          setSettingsSection(section);
-          setSettingsOpen(true);
-        }}
-      />
 
       {/* 展开时显示文件网格 */}
       {expanded && (

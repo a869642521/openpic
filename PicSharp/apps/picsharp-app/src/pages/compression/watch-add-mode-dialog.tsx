@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+﻿import { memo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -68,17 +68,32 @@ function WatchAddModeDialog({ open, onConfirm, onCancel }: WatchAddModeDialogPro
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleCancel()}>
       <DialogContent
-        className='flex max-h-[85vh] max-w-lg flex-col gap-0 p-0'
+        className='flex max-h-[85vh] max-w-lg flex-col gap-0 p-0 [&>button.absolute]:hidden'
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
           handleCancel();
           e.preventDefault();
         }}
       >
-        {/* 固定标题区 */}
-        <DialogHeader className='shrink-0 border-b border-neutral-200 px-6 py-4 pr-14 dark:border-neutral-800'>
-          <DialogTitle>{t('page.compression.watch.guide.add_mode_dialog_title')}</DialogTitle>
-          <DialogDescription>
+        {/* 固定标题区：标题在左，操作按钮在右 */}
+        <DialogHeader className='shrink-0 border-b border-neutral-200 px-6 py-6 dark:border-neutral-800'>
+          <div className='flex items-center justify-between'>
+            <DialogTitle>{t('page.compression.watch.guide.add_mode_dialog_title')}</DialogTitle>
+            <div className='flex h-10 items-center gap-2'>
+              <Button variant='outline' size='sm' onClick={handleCancel}>
+                {t('cancel')}
+              </Button>
+              <Button
+                size='sm'
+                disabled={!selectedMode}
+                onClick={handleConfirm}
+                className='bg-blue-600 text-white hover:bg-blue-700 disabled:bg-neutral-200 disabled:text-neutral-400'
+              >
+                {t('page.compression.watch.guide.add_confirm')}
+              </Button>
+            </div>
+          </div>
+          <DialogDescription className='sr-only'>
             {t('page.compression.watch.guide.add_mode_dialog_description')}
           </DialogDescription>
         </DialogHeader>
@@ -134,7 +149,7 @@ function WatchAddModeDialog({ open, onConfirm, onCancel }: WatchAddModeDialogPro
                       <p className='text-sm font-medium text-neutral-900 dark:text-neutral-100'>
                         {label}
                       </p>
-                      <p className='mt-0.5 text-xs text-neutral-500 dark:text-neutral-400'>
+                      <p className='mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400'>
                         {desc}
                       </p>
                     </div>
@@ -196,26 +211,17 @@ function WatchAddModeDialog({ open, onConfirm, onCancel }: WatchAddModeDialogPro
           {isFeatureEnabled('compression', localSettings) && (
             <CompressionPanel settings={localSettings} onChange={handlePatch} />
           )}
-          {isFeatureEnabled('convert', localSettings) && (
-            <ConvertPanel settings={localSettings} onChange={handlePatch} />
-          )}
           {isFeatureEnabled('resize', localSettings) && (
             <ResizePanel settings={localSettings} onChange={handlePatch} />
+          )}
+          {isFeatureEnabled('convert', localSettings) && (
+            <ConvertPanel settings={localSettings} onChange={handlePatch} />
           )}
           {isFeatureEnabled('watermark', localSettings) && (
             <WatermarkPanel settings={localSettings} onChange={handlePatch} />
           )}
         </div>
 
-        {/* 固定底部操作栏 */}
-        <div className='flex shrink-0 justify-end gap-2 border-t border-neutral-200 px-6 py-4 dark:border-neutral-800'>
-          <Button variant='outline' onClick={handleCancel}>
-            {t('cancel')}
-          </Button>
-          <Button disabled={!selectedMode} onClick={handleConfirm}>
-            {t('page.compression.watch.guide.add_confirm')}
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );

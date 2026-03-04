@@ -185,6 +185,13 @@ Tip: Keep when archiving or proving copyright; remove for web, dev, or anonymous
   'settings.compression.resize.fit.option.fill': 'Fill',
   'settings.compression.resize.fit.option.inside': 'Inside',
   'settings.compression.resize.fit.option.outside': 'Outside',
+  'compression.options.resize.dimensions_label': 'Size',
+  'compression.options.resize.fit.name.cover': 'Cover',
+  'compression.options.resize.fit.name.fill': 'Fill',
+  'compression.options.resize.fit.name.contain': 'Contain',
+  'compression.options.resize.fit.desc.cover': 'Scale & crop edges',
+  'compression.options.resize.fit.desc.fill': 'Stretch to fill',
+  'compression.options.resize.fit.desc.contain': 'Show fully, add borders',
   // Settings.Compression.Watermark
   'settings.compression.watermark.title': 'Watermark',
   'settings.compression.watermark.description':

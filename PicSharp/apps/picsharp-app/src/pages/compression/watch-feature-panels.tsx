@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from 'react';
+﻿import React, { memo, useState, useEffect } from 'react';
 import { useI18n } from '@/i18n';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -177,7 +177,7 @@ export function WatermarkPositionPicker({
 
 export type WatchFeature = 'compression' | 'resize' | 'watermark' | 'convert';
 
-export const ALL_FEATURES: WatchFeature[] = ['compression', 'resize', 'watermark', 'convert'];
+export const ALL_FEATURES: WatchFeature[] = ['compression', 'resize', 'convert', 'watermark'];
 
 export const FEATURE_ENABLE_KEYS: Record<WatchFeature, keyof WatchFolderSettings> = {
   compression: 'compressionEnable',
@@ -229,7 +229,7 @@ export const CompressionPanel = memo(function CompressionPanel({
   return (
     <div className={SECTION_CLASS}>
       <div className={cn(ROW_CLASS, 'mb-0')}>
-        <p className='text-sm font-medium'>
+        <p className='text-sm font-semibold'>
           {t('page.compression.watch.folder.settings.compression')}
         </p>
         <Tabs
@@ -259,14 +259,14 @@ export const CompressionPanel = memo(function CompressionPanel({
             <Label className={LABEL_CLASS}>
               {t('page.compression.watch.folder.settings.size_filter')}
             </Label>
-            <div className='flex h-7 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
+            <div className='flex h-8 w-[350px] items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
               <Input
                 type='text'
                 value={filterInput}
                 placeholder='500'
                 onChange={(e) => setFilterInput(e.target.value)}
                 onBlur={handleFilterBlur}
-                className='h-auto min-w-0 w-[48px] border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
               />
               <span className='shrink-0 text-xs text-neutral-400'>KB</span>
             </div>
@@ -290,14 +290,14 @@ export const ConvertPanel = memo(function ConvertPanel({
   return (
     <div className={SECTION_CLASS}>
       <div className={cn(ROW_CLASS, 'mb-0')}>
-        <p className='text-sm font-medium'>
+        <p className='text-sm font-semibold'>
           {t('page.compression.watch.folder.settings.convert')}
         </p>
         <Select
           value={currentFormat}
           onValueChange={(v) => onChange({ convertTypes: [v as ConvertFormat] })}
         >
-          <SelectTrigger className='h-8 w-[110px] shrink-0 text-xs'>
+          <SelectTrigger className='h-8 w-[350px] shrink-0 text-xs'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -309,7 +309,7 @@ export const ConvertPanel = memo(function ConvertPanel({
           </SelectContent>
         </Select>
       </div>
-      {currentFormat === ConvertFormat.Jpg && (
+      {currentFormat === ConvertFormat.Png && (
         <div className={cn(ROW_CLASS, 'mt-3')}>
           <Label className={LABEL_CLASS}>
             {t('page.compression.watch.folder.settings.convert_alpha')}
@@ -319,7 +319,7 @@ export const ConvertPanel = memo(function ConvertPanel({
               type='color'
               value={s.convertAlpha}
               onChange={(e) => onChange({ convertAlpha: e.target.value })}
-              className='h-7 w-10 cursor-pointer rounded border border-neutral-200 p-0.5'
+              className='h-7 w-10 cursor-pointer overflow-hidden rounded-md border-0 bg-transparent p-0'
             />
             <Input
               value={s.convertAlpha}
@@ -332,6 +332,38 @@ export const ConvertPanel = memo(function ConvertPanel({
     </div>
   );
 });
+
+// ─── ResizeFit visual options ─────────────────────────────────────────────────
+
+const RESIZE_FIT_OPTIONS: {
+  fit: ResizeFit;
+  nameKey: string;
+  descKey: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    fit: ResizeFit.Cover,
+    nameKey: 'compression.options.resize.fit.name.cover',
+    descKey: 'compression.options.resize.fit.desc.cover',
+    icon: <img src='/icon-Sizecoverage.png' alt='cover' className='shrink-0 rounded object-contain' style={{ width: 90, height: 50 }} />,
+  },
+  {
+    fit: ResizeFit.Fill,
+    nameKey: 'compression.options.resize.fit.name.fill',
+    descKey: 'compression.options.resize.fit.desc.fill',
+    icon: (
+      <img src='/icon-Sizepadding.png' alt='fill' className='shrink-0 rounded object-contain' style={{ width: 50, height: 50 }} />
+    ),
+  },
+  {
+    fit: ResizeFit.Contain,
+    nameKey: 'compression.options.resize.fit.name.contain',
+    descKey: 'compression.options.resize.fit.desc.contain',
+    icon: (
+      <img src='/icon-Dimensionsinclude.png' alt='contain' className='shrink-0 rounded object-contain' style={{ width: 50, height: 50 }} />
+    ),
+  },
+];
 
 // ─── ResizePanel ──────────────────────────────────────────────────────────────
 
@@ -361,7 +393,7 @@ export const ResizePanel = memo(function ResizePanel({
   return (
     <div className={SECTION_CLASS}>
       <div className={cn(ROW_CLASS, 'mb-0')}>
-        <p className='text-sm font-medium'>
+        <p className='text-sm font-semibold'>
           {t('page.compression.watch.folder.settings.resize')}
         </p>
         <Tabs
@@ -393,7 +425,7 @@ export const ResizePanel = memo(function ResizePanel({
                 {t('compression.options.resize.scale_label')}
               </Label>
               <div
-                className='flex h-8 w-[120px] items-center gap-1 rounded-md border px-2 text-xs'
+                className='flex h-8 w-[350px] items-center gap-1 rounded-md border px-2 text-xs'
                 style={{ borderColor: 'rgb(219,219,220)' }}
               >
                 <Input
@@ -418,75 +450,89 @@ export const ResizePanel = memo(function ResizePanel({
 
           {resizeMode === ResizeMode.Custom && (
             <>
+              {/* 宽高同行 */}
               <div className={ROW_CLASS}>
                 <Label className={LABEL_CLASS}>
-                  {t('compression.options.resize.width_label')}
+                  {t('compression.options.resize.dimensions_label')}
                 </Label>
-                <div
-                  className='flex h-8 w-[120px] items-center gap-1 rounded-md border px-2'
-                  style={{ borderColor: 'rgb(219,219,220)' }}
-                >
-                  <Input
-                    type='number'
-                    min={0}
-                    value={widthInput}
-                    onChange={(e) => setWidthInput(e.target.value)}
-                    onBlur={handleResizeBlur}
-                    placeholder='0'
-                    className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
-                  />
-                  <span className='shrink-0 text-xs text-neutral-400'>
-                    {t('compression.options.resize.px')}
-                  </span>
+                <div className='flex w-[350px] items-center gap-3'>
+                  <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
+                    <Input
+                      type='number'
+                      min={0}
+                      value={widthInput}
+                      onChange={(e) => setWidthInput(e.target.value)}
+                      onBlur={handleResizeBlur}
+                      placeholder='0'
+                      className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                    />
+                    <span className='shrink-0 text-[10px] font-medium text-neutral-400'>W</span>
+                  </div>
+                  <span className='text-xs text-neutral-300 dark:text-neutral-600'>×</span>
+                  <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
+                    <Input
+                      type='number'
+                      min={0}
+                      value={heightInput}
+                      onChange={(e) => setHeightInput(e.target.value)}
+                      onBlur={handleResizeBlur}
+                      placeholder='0'
+                      className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                    />
+                    <span className='shrink-0 text-[10px] font-medium text-neutral-400'>H</span>
+                  </div>
                 </div>
               </div>
-              <div className={ROW_CLASS}>
-                <Label className={LABEL_CLASS}>
-                  {t('compression.options.resize.height_label')}
-                </Label>
-                <div
-                  className='flex h-8 w-[120px] items-center gap-1 rounded-md border px-2'
-                  style={{ borderColor: 'rgb(219,219,220)' }}
-                >
-                  <Input
-                    type='number'
-                    min={0}
-                    value={heightInput}
-                    onChange={(e) => setHeightInput(e.target.value)}
-                    onBlur={handleResizeBlur}
-                    placeholder='0'
-                    className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
-                  />
-                  <span className='shrink-0 text-xs text-neutral-400'>
-                    {t('compression.options.resize.px')}
-                  </span>
-                </div>
-              </div>
+              {/* 内容适应：标题在左，卡片在右 */}
               <div className={ROW_CLASS}>
                 <Label className={LABEL_CLASS}>
                   {t('compression.options.resize.fit_label')}
                 </Label>
-                <Select
-                  value={s.resizeFit}
-                  onValueChange={(v) => onChange({ resizeFit: v as ResizeFit })}
-                >
-                  <SelectTrigger className='h-8 w-[120px] text-xs'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ResizeFit).map((fit) => (
-                      <SelectItem key={fit} value={fit} className='text-xs'>
-                        {t(`settings.compression.resize.fit.option.${fit}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className='flex w-[350px] gap-2'>
+                  {RESIZE_FIT_OPTIONS.map(({ fit, nameKey, descKey, icon }) => {
+                    const active = s.resizeFit === fit;
+                    return (
+                      <button
+                        key={fit}
+                        type='button'
+                        onClick={() => onChange({ resizeFit: fit })}
+                        className={cn(
+                          'flex h-[130px] flex-1 flex-col items-center justify-center gap-2 rounded-lg border px-2 py-2 transition-colors',
+                          active
+                            ? 'border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/40'
+                            : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800/50',
+                        )}
+                      >
+                        {icon}
+                        <span
+                          className={cn(
+                            'text-xs font-medium leading-none',
+                            active
+                              ? 'text-blue-700 dark:text-blue-300'
+                              : 'text-neutral-600 dark:text-neutral-400',
+                          )}
+                        >
+                          {t(nameKey)}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-center text-[9px] leading-tight',
+                            active
+                              ? 'text-blue-500 dark:text-blue-400'
+                              : 'text-neutral-400 dark:text-neutral-500',
+                          )}
+                        >
+                          {t(descKey)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}
         </div>
       </div>
-    </div>
   );
 });
 
@@ -511,7 +557,7 @@ export const WatermarkPanel = memo(function WatermarkPanel({
   return (
     <div className={SECTION_CLASS}>
       <div className={cn(ROW_CLASS, 'mb-0')}>
-        <p className='text-sm font-medium'>
+        <p className='text-sm font-semibold'>
           {t('page.compression.watch.folder.settings.watermark')}
         </p>
         <Tabs
@@ -547,45 +593,41 @@ export const WatermarkPanel = memo(function WatermarkPanel({
                 <Input
                   value={s.watermarkText}
                   onChange={(e) => onChange({ watermarkText: e.target.value })}
-                  className='h-8 w-[180px] text-xs'
+                  className='h-8 w-[350px] text-xs'
                   placeholder={t('page.compression.watch.folder.settings.watermark_text_placeholder')}
                 />
               </div>
-              <div className={ROW_CLASS}>
-                <Label className={LABEL_CLASS}>
-                  {t('page.compression.watch.folder.settings.watermark_color')}
-                </Label>
-                <div className='flex items-center gap-2'>
-                  <input
-                    type='color'
-                    value={s.watermarkTextColor}
-                    onChange={(e) => onChange({ watermarkTextColor: e.target.value })}
-                    className='h-7 w-10 cursor-pointer rounded border border-neutral-200 p-0.5'
-                  />
-                  <Input
-                    value={s.watermarkTextColor}
-                    onChange={(e) => onChange({ watermarkTextColor: e.target.value })}
-                    className='h-7 w-[90px] text-xs'
-                  />
-                </div>
-              </div>
+              {/* 字号 + 颜色同行 */}
               <div className={ROW_CLASS}>
                 <Label className={LABEL_CLASS}>
                   {t('page.compression.watch.folder.settings.watermark_size')}
                 </Label>
-                <div
-                  className='flex h-8 w-[120px] items-center gap-1 rounded-md border px-2'
-                  style={{ borderColor: 'rgb(219,219,220)' }}
-                >
-                  <Input
-                    type='number'
-                    min={8}
-                    max={200}
-                    value={s.watermarkFontSize}
-                    onChange={(e) => onChange({ watermarkFontSize: Number(e.target.value) })}
-                    className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                <div className='flex h-8 w-[350px] items-center gap-2'>
+                  <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
+                    <Input
+                      type='number'
+                      min={8}
+                      max={200}
+                      value={s.watermarkFontSize}
+                      onChange={(e) => onChange({ watermarkFontSize: Number(e.target.value) })}
+                      className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                    />
+                    <span className='shrink-0 text-[10px] text-neutral-400'>px</span>
+                  </div>
+                  <Label className={cn(LABEL_CLASS, 'shrink-0')}>
+                    {t('page.compression.watch.folder.settings.watermark_color')}
+                  </Label>
+                  <input
+                    type='color'
+                    value={s.watermarkTextColor}
+                    onChange={(e) => onChange({ watermarkTextColor: e.target.value })}
+                    className='h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-md border-0 bg-transparent p-0'
                   />
-                  <span className='shrink-0 text-xs text-neutral-400'>px</span>
+                  <Input
+                    value={s.watermarkTextColor}
+                    onChange={(e) => onChange({ watermarkTextColor: e.target.value })}
+                    className='h-8 w-[90px] text-xs shadow-none'
+                  />
                 </div>
               </div>
             </div>
@@ -601,7 +643,7 @@ export const WatermarkPanel = memo(function WatermarkPanel({
                 <Button
                   variant='outline'
                   size='sm'
-                  className='h-8 max-w-[180px] truncate text-xs'
+                  className='h-8 w-[350px] truncate text-xs'
                   onClick={handleChooseWatermarkImage}
                   title={s.watermarkImagePath}
                 >
@@ -614,46 +656,40 @@ export const WatermarkPanel = memo(function WatermarkPanel({
                 <Label className={LABEL_CLASS}>
                   {t('page.compression.watch.folder.settings.watermark_opacity')}
                 </Label>
-                <div className='flex items-center gap-2'>
-                  <input
-                    type='range'
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={s.watermarkImageOpacity}
-                    onChange={(e) => onChange({ watermarkImageOpacity: Number(e.target.value) })}
-                    className='w-[100px]'
-                  />
-                  <span className='w-8 text-right text-xs text-neutral-500'>
-                    {Math.round(s.watermarkImageOpacity * 100)}%
+                <div className='flex w-[350px] items-center gap-3'>
+                  <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
+                    <Input
+                      type='number'
+                      min={0}
+                      max={100}
+                      value={Math.round(s.watermarkImageOpacity * 100)}
+                      onChange={(e) => onChange({ watermarkImageOpacity: Math.min(1, Math.max(0, Number(e.target.value) / 100)) })}
+                      className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                    />
+                    <span className='shrink-0 text-[10px] text-neutral-400'>%</span>
+                  </div>
+                  <span className='shrink-0 text-xs text-neutral-600 dark:text-neutral-400'>
+                    {t('page.compression.watch.folder.settings.watermark_scale')}
                   </span>
-                </div>
-              </div>
-              <div className={ROW_CLASS}>
-                <Label className={LABEL_CLASS}>
-                  {t('page.compression.watch.folder.settings.watermark_scale')}
-                </Label>
-                <div className='flex items-center gap-2'>
-                  <input
-                    type='range'
-                    min={0.01}
-                    max={1}
-                    step={0.01}
-                    value={s.watermarkImageScale}
-                    onChange={(e) => onChange({ watermarkImageScale: Number(e.target.value) })}
-                    className='w-[100px]'
-                  />
-                  <span className='w-8 text-right text-xs text-neutral-500'>
-                    {Math.round(s.watermarkImageScale * 100)}%
-                  </span>
+                  <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
+                    <Input
+                      type='number'
+                      min={1}
+                      max={100}
+                      value={Math.round(s.watermarkImageScale * 100)}
+                      onChange={(e) => onChange({ watermarkImageScale: Math.min(1, Math.max(0.01, Number(e.target.value) / 100)) })}
+                      className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+                    />
+                    <span className='shrink-0 text-[10px] text-neutral-400'>%</span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {/* 位置选择（可视化 3×3 宫格）*/}
-          <div className='space-y-2'>
-            <Label className={LABEL_CLASS}>
+          <div className='flex items-start justify-between gap-3'>
+            <Label className={cn(LABEL_CLASS, 'shrink-0 pt-1')}>
               {t('page.compression.watch.folder.settings.watermark_position')}
             </Label>
             <WatermarkPositionPicker
@@ -669,6 +705,5 @@ export const WatermarkPanel = memo(function WatermarkPanel({
           </div>
         </div>
       </div>
-    </div>
   );
 });
