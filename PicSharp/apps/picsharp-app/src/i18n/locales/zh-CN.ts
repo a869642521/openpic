@@ -1,4 +1,4 @@
-export default {
+﻿export default {
   // Common
   'common.no_image_to_compress': '未识别到可压缩的图片',
   'common.drag_and_drop': '鼠标松开进行压缩',
@@ -52,6 +52,13 @@ export default {
   // General.Autostart
   'settings.general.autostart.title': '开机自动启动',
   'settings.general.autostart.description': '开机后自动启动应用',
+  'settings.general.context_menu.title': '右键菜单集成',
+  'settings.general.context_menu.defaults_dialog.title': '右键菜单默认参数设置',
+  'settings.general.context_menu.defaults_dialog.tab_compress': '压缩默认参数',
+  'settings.general.context_menu.defaults_dialog.tab_watch': '监听默认参数',
+  'settings.general.context_menu.defaults_dialog.compress_section': '压缩方式',
+  'settings.general.context_menu.defaults_dialog.output_section': '输出方式',
+  'settings.general.context_menu.description': '在文件夹右键菜单中添加「用 PicSharp 压缩」和「用 PicSharp 监听」选项（仅 Windows）',
   // Settings.General.Update
   'settings.general.update.title': '自动检查更新',
   'settings.general.update.description': '当有新版本可用时,自动检查更新并通知',

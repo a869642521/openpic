@@ -5,6 +5,7 @@ import Notification from './notification';
 import Section from '../section';
 import Update from './update';
 import ContextMenu from './context-menu';
+import ContextMenuDefaultsDialog from './context-menu-defaults-dialog';
 import { isMac } from '@/utils';
 import Privacy from './privacy';
 import { useEffect } from 'react';
@@ -23,6 +24,7 @@ export default function SettingsGeneral() {
   }, []);
 
   return (
+    <>
     <Section>
       <Card>
         <ContextMenu />
@@ -33,5 +35,7 @@ export default function SettingsGeneral() {
         {/* <Privacy /> */}
       </Card>
     </Section>
+    <ContextMenuDefaultsDialog />
+    </>
   );
 }

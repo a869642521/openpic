@@ -127,6 +127,27 @@ fn set_window_open_with_watch(app: &AppHandle, path: PathBuf) {
     }
 }
 
+
+fn set_window_open_with_payload(app: &AppHandle, mode: &str, paths: Vec<PathBuf>) {
+    let paths_json = paths
+        .iter()
+        .map(|p| format!("\"{}\"", p.to_string_lossy().replace("\\", "\\\\")))
+        .collect::<Vec<_>>()
+        .join(",");
+    if let Some(window) = app.get_webview_window("main") {
+        let payload = format!("{{mode: \"{}\", paths: [{}]}}", mode, paths_json);
+        info!("[set_window_open_with_payload] -> mode={} payload: {}", mode, payload);
+        let script = format!("window.LAUNCH_PAYLOAD = {};", payload);
+        if let Err(e) = window.eval(&script) {
+            error!(
+                "[set_window_open_with_payload] -> Failed to set payload: {}",
+                e
+            );
+        }
+    } else {
+        error!("[set_window_open_with_payload] -> Failed to get main window");
+    }
+}
 #[allow(unused_variables)]
 #[allow(dead_code)]
 #[cfg(desktop)]
@@ -238,6 +259,29 @@ pub fn run() {
                                 .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_watch: {}", e));
                         }
                     }
+                    Some("compress-silent") => {
+                        if !files.is_empty() {
+                            allow_file_in_scopes(app, files.clone());
+                            let paths: Vec<String> = files.iter().map(|f| f.to_string_lossy().to_string()).collect();
+                            app.emit("ns_compress_silent", paths)
+                                .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_compress_silent: {}", e));
+                        }
+                    }
+                    Some("watch-silent") => {
+                        if let Some(path) = files.first() {
+                            allow_file_in_scopes(app, vec![path.clone()]);
+                            app.emit("ns_watch_silent", path.to_string_lossy().to_string())
+                                .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_watch_silent: {}", e));
+                        }
+                    }
+                    Some("settings-compress") => {
+                        app.emit("ns_settings_compress", ())
+                            .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_settings_compress: {}", e));
+                    }
+                    Some("settings-watch") => {
+                        app.emit("ns_settings_watch", ())
+                            .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_settings_watch: {}", e));
+                    }
                     _ => {
                         if !files.is_empty() {
                             allow_file_in_scopes(app, files.clone());
@@ -346,6 +390,41 @@ pub fn run() {
                                 set_window_open_with_watch(&app_handle, path_clone.clone());
                             });
                         }
+                    }
+                    Some("compress-silent") => {
+                        if !files.is_empty() {
+                            let app_handle = app.handle().clone();
+                            allow_file_in_scopes(&app_handle, files.clone());
+                            app.listen("window-ready", move |_| {
+                                info!("[Setup] -> Launching with --action compress-silent");
+                                set_window_open_with_payload(&app_handle, "compress-silent", files.clone());
+                            });
+                        }
+                    }
+                    Some("watch-silent") => {
+                        if let Some(path) = files.first() {
+                            let app_handle = app.handle().clone();
+                            let path_clone = path.clone();
+                            allow_file_in_scopes(&app_handle, vec![path.clone()]);
+                            app.listen("window-ready", move |_| {
+                                info!("[Setup] -> Launching with --action watch-silent: {:?}", path_clone);
+                                set_window_open_with_payload(&app_handle, "watch-silent", vec![path_clone.clone()]);
+                            });
+                        }
+                    }
+                    Some("settings-compress") => {
+                        let app_handle = app.handle().clone();
+                        app.listen("window-ready", move |_| {
+                            info!("[Setup] -> Launching with --action settings-compress");
+                            set_window_open_with_payload(&app_handle, "settings-compress", vec![]);
+                        });
+                    }
+                    Some("settings-watch") => {
+                        let app_handle = app.handle().clone();
+                        app.listen("window-ready", move |_| {
+                            info!("[Setup] -> Launching with --action settings-watch");
+                            set_window_open_with_payload(&app_handle, "settings-watch", vec![]);
+                        });
                     }
                     _ => {
                         if !files.is_empty() {

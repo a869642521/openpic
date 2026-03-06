@@ -36,6 +36,9 @@
   "compression_watch_size_filter_enable": false,
   "compression_watch_size_filter_value": 500,
   "tinypng_api_keys": [],
+  "context_menu_integration": false,
+  "context_menu_compress_defaults": "",
+  "context_menu_watch_defaults": "",
   "tinypng_preserve_metadata": [
     "copyright",
     "creator",

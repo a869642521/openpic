@@ -1,4 +1,4 @@
-use log::{error, info};
+﻿use log::{error, info};
 use std::process::Command;
 use tauri::ipc::Response;
 use tauri::{command, Manager};
@@ -365,6 +365,93 @@ pub async fn ipc_kill_picsharp_sidecar_processes() -> Result<String, String> {
     kill_processes_by_name("picsharp-sidecar").await
 }
 
+#[cfg(target_os = "windows")]
+#[command]
+pub async fn ipc_register_context_menu(enable: bool) -> Result<(), String> {
+    let exe_path = std::env::current_exe()
+        .map_err(|e| format!("Failed to get exe path: {}", e))?;
+    let exe_str = exe_path.to_string_lossy();
+    let parent_base = "Software\\Classes\\Directory\\shell\\PicSharp";
+
+    if enable {
+        // 1. Create parent key with MUIVerb and SubCommands (cascading submenu trigger)
+        reg_set_default(parent_base, "PicSharp")?;
+        reg_set_value(parent_base, "MUIVerb", "PicSharp")?;
+        reg_set_value(parent_base, "SubCommands", "")?;
+
+        // 2. Define sub-commands
+        let subcommands: Vec<(&str, &str, Option<String>)> = vec![
+            ("01_compress", "直接后台处理压缩", Some(format!("\"{}\" --action compress-silent \"%1\"", exe_str))),
+            ("02_watch",    "直接后台处理监听", Some(format!("\"{}\" --action watch-silent \"%1\"", exe_str))),
+            ("03_sep",      "",                 None),
+            ("04_settings_compress", "设置默认压缩参数", Some(format!("\"{}\" --action settings-compress", exe_str))),
+            ("05_settings_watch",    "设置默认监听参数", Some(format!("\"{}\" --action settings-watch", exe_str))),
+        ];
+
+        for (sub_name, display, cmd) in &subcommands {
+            let sub_base = format!("{}\\shell\\{}", parent_base, sub_name);
+            if sub_name == &"03_sep" {
+                // Separator: CommandFlags = 0x40
+                reg_set_dword(&sub_base, "CommandFlags", "0x40")?;
+            } else {
+                reg_set_default(&sub_base, display)?;
+                if let Some(cmd_value) = cmd {
+                    let cmd_key = format!("{}\\command", sub_base);
+                    reg_set_default(&cmd_key, cmd_value)?;
+                }
+            }
+            info!("[ContextMenu] Registered sub: {}", sub_name);
+        }
+        info!("[ContextMenu] Cascading menu registered");
+    } else {
+        // Delete parent key and all sub-keys recursively
+        let _ = Command::new("reg")
+            .args(["delete", &format!("HKCU\\{}", parent_base), "/f"])
+            .output();
+        // Also clean up old flat entries if present
+        for old_key in &["PicSharp_Compress", "PicSharp_Watch"] {
+            let _ = Command::new("reg")
+                .args(["delete", &format!("HKCU\\Software\\Classes\\Directory\\shell\\{}", old_key), "/f"])
+                .output();
+        }
+        info!("[ContextMenu] Removed all PicSharp context menu entries");
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn reg_set_default(key: &str, value: &str) -> Result<(), String> {
+    Command::new("reg")
+        .args(["add", &format!("HKCU\\{}", key), "/ve", "/d", value, "/f"])
+        .output()
+        .map_err(|e| format!("reg set default failed for {}: {}", key, e))?;
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn reg_set_value(key: &str, name: &str, value: &str) -> Result<(), String> {
+    Command::new("reg")
+        .args(["add", &format!("HKCU\\{}", key), "/v", name, "/d", value, "/f"])
+        .output()
+        .map_err(|e| format!("reg set value failed for {}: {}", key, e))?;
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn reg_set_dword(key: &str, name: &str, data: &str) -> Result<(), String> {
+    Command::new("reg")
+        .args(["add", &format!("HKCU\\{}", key), "/v", name, "/t", "REG_DWORD", "/d", data, "/f"])
+        .output()
+        .map_err(|e| format!("reg set dword failed for {}: {}", key, e))?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+#[command]
+pub async fn ipc_register_context_menu(_enable: bool) -> Result<(), String> {
+    Err("Context menu integration is only supported on Windows".to_string())
+}
 #[command]
 pub async fn ipc_open_devtool<R: Runtime>(app: AppHandle<R>) -> Response {
     match app.get_webview_window("main") {

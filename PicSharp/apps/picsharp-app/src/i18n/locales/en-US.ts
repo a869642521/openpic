@@ -1,4 +1,4 @@
-const enUS = {
+﻿const enUS = {
   // Common
   'common.no_image_to_compress': 'No images to compress',
   'common.drag_and_drop': 'Drop to compress',
@@ -51,6 +51,14 @@ const enUS = {
   'settings.general.autostart.title': 'Launch at Startup',
   'settings.general.autostart.description':
     'Automatically start the application when the system starts.',
+  'settings.general.context_menu.title': 'Context Menu Integration',
+  'settings.general.context_menu.defaults_dialog.title': 'Context Menu Default Settings',
+  'settings.general.context_menu.defaults_dialog.tab_compress': 'Compress Defaults',
+  'settings.general.context_menu.defaults_dialog.tab_watch': 'Watch Defaults',
+  'settings.general.context_menu.defaults_dialog.compress_section': 'Compression Mode',
+  'settings.general.context_menu.defaults_dialog.output_section': 'Output Mode',
+  'settings.general.context_menu.description':
+    'Add "Compress with PicSharp" and "Watch with PicSharp" to folder right-click menu (Windows only).',
   // Settings.General.Update
   'settings.general.update.title': 'Auto Check Update',
   'settings.general.update.description':
