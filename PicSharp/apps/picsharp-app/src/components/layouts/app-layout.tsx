@@ -46,6 +46,7 @@ export default function AppLayout() {
   useEffect(() => {
     let unlistenNsCompress: UnlistenFn | null = null;
     let unlistenNsWatchAndCompress: UnlistenFn | null = null;
+    let unlistenNsWatch: UnlistenFn | null = null;
     let unlistenDeepLink: UnlistenFn | null = null;
 
     async function process(mode: string, paths: string[]) {
@@ -58,7 +59,14 @@ export default function AppLayout() {
           setWatchingFolder,
           setMode,
           reset,
+          setPendingWatchPath,
         } = useCompressionStore.getState();
+        if (mode === 'ns_watch') {
+          setPendingWatchPath(paths[0]);
+          navigate('/compression/watch/workspace');
+          setTimeout(() => { progressRef.current?.done(); }, 100);
+          return;
+        }
         reset();
         if (mode === 'ns_compress') {
           const fileInfos = await parsePaths(paths, VALID_IMAGE_EXTS);
@@ -91,6 +99,9 @@ export default function AppLayout() {
           case 'compress:compare':
             // navigate('/image-compare');
             break;
+          case 'ns_watch':
+            process('ns_watch', payload.paths);
+            break;
           default:
             process(payload.mode, payload.paths);
             break;
@@ -99,8 +110,9 @@ export default function AppLayout() {
     }
 
     async function spawnNewWindow(mode: string, paths: string[]) {
-      const titles = {
+      const titles: Record<string, string> = {
         ns_compress: t('ns_compress'),
+        ns_watch: t('ns_watch_and_compress'),
         ns_watch_and_compress: t('ns_watch_and_compress'),
       };
       const { working } = useCompressionStore.getState();
@@ -163,6 +175,17 @@ export default function AppLayout() {
           }
         },
       );
+      unlistenNsWatch = await currentWindow.listen('ns_watch', async (event) => {
+        r('ns_watch');
+        if (currentWindow.label !== 'main') return;
+        const path = event.payload as string;
+        const hasSpawned = await spawnNewWindow('ns_watch', [path]);
+        if (!hasSpawned) {
+          currentWindow.show();
+          currentWindow.setFocus();
+          process('ns_watch', [path]);
+        }
+      });
       emit('ready', currentWindow.label);
     }
 
@@ -228,6 +251,7 @@ export default function AppLayout() {
       clearInterval(timer);
       isFunction(unlistenNsCompress) && unlistenNsCompress();
       isFunction(unlistenNsWatchAndCompress) && unlistenNsWatchAndCompress();
+      isFunction(unlistenNsWatch) && unlistenNsWatch();
       isFunction(unlistenDeepLink) && unlistenDeepLink();
     };
   }, []);

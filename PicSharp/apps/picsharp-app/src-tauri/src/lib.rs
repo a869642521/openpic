@@ -109,6 +109,24 @@ fn set_window_open_with_files(app: &AppHandle, files: Vec<PathBuf>) {
     }
 }
 
+
+fn set_window_open_with_watch(app: &AppHandle, path: PathBuf) {
+    let path_str = path.to_string_lossy().replace("\\", "\\\\");
+    if let Some(window) = app.get_webview_window("main") {
+        let payload = format!("{{mode: \"ns_watch\", paths: [\"{}\"]}}", path_str);
+        info!("[set_window_open_with_watch] -> payload: {}", payload);
+        let script = format!("window.LAUNCH_PAYLOAD = {};", payload);
+        if let Err(e) = window.eval(&script) {
+            error!(
+                "[set_window_open_with_watch] -> Failed to set watch payload: {}",
+                e
+            );
+        }
+    } else {
+        error!("[set_window_open_with_watch] -> Failed to get main window");
+    }
+}
+
 #[allow(unused_variables)]
 #[allow(dead_code)]
 #[cfg(desktop)]
@@ -152,7 +170,16 @@ struct Payload {
 
 fn get_files_from_argv(argv: Vec<String>) -> Vec<PathBuf> {
     let mut files = Vec::new();
-    for (_, maybe_file) in argv.iter().enumerate().skip(1) {
+    let mut skip_next = false;
+    for maybe_file in argv.iter().skip(1) {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+        if maybe_file == "--action" {
+            skip_next = true;
+            continue;
+        }
         if maybe_file.starts_with("-") {
             continue;
         }
@@ -167,6 +194,19 @@ fn get_files_from_argv(argv: Vec<String>) -> Vec<PathBuf> {
         }
     }
     files
+}
+
+fn get_action_from_argv(argv: &[String]) -> Option<String> {
+    let mut iter = argv.iter().peekable();
+    while let Some(arg) = iter.next() {
+        if arg == "--action" {
+            return iter.next().map(|s| s.clone());
+        }
+        if let Some(val) = arg.strip_prefix("--action=") {
+            return Some(val.to_string());
+        }
+    }
+    None
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -188,22 +228,34 @@ pub fn run() {
                         error
                     );
                 });
+                let action = get_action_from_argv(&args);
                 let files = get_files_from_argv(args.clone());
-                if !files.is_empty() {
-                    allow_file_in_scopes(app, files.clone());
-                    app.emit(
-                        "ns_compress",
-                        files
-                            .iter()
-                            .map(|f| f.to_string_lossy().to_string())
-                            .collect::<Vec<_>>(),
-                    )
-                    .unwrap_or_else(|error| {
-                        error!(
-                            "[Single Instance Emit] -> Failed to emit ns_compress event: {}",
-                            error
-                        );
-                    });
+                match action.as_deref() {
+                    Some("watch") => {
+                        if let Some(path) = files.first() {
+                            allow_file_in_scopes(app, vec![path.clone()]);
+                            app.emit("ns_watch", path.to_string_lossy().to_string())
+                                .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_watch: {}", e));
+                        }
+                    }
+                    _ => {
+                        if !files.is_empty() {
+                            allow_file_in_scopes(app, files.clone());
+                            app.emit(
+                                "ns_compress",
+                                files
+                                    .iter()
+                                    .map(|f| f.to_string_lossy().to_string())
+                                    .collect::<Vec<_>>(),
+                            )
+                            .unwrap_or_else(|error| {
+                                error!(
+                                    "[Single Instance Emit] -> Failed to emit ns_compress event: {}",
+                                    error
+                                );
+                            });
+                        }
+                    }
                 }
             }
         }))
@@ -247,6 +299,7 @@ pub fn run() {
             command::ipc_kill_processes_by_name,
             command::ipc_kill_picsharp_sidecar_processes,
             command::ipc_open_devtool,
+            command::ipc_register_context_menu,
             window::ipc_spawn_window,
             #[cfg(target_os = "macos")]
             macos::traffic_light::set_traffic_lights,
@@ -279,14 +332,31 @@ pub fn run() {
 
             #[cfg(desktop)]
             {
-                let files = get_files_from_argv(std::env::args().collect());
-                if !files.is_empty() {
-                    let app_handle = app.handle().clone();
-                    allow_file_in_scopes(&app_handle, files.clone());
-                    app.listen("window-ready", move |_| {
-                        info!("[Setup] -> Launching with files: {:?}", files);
-                        set_window_open_with_files(&app_handle, files.clone());
-                    });
+                let argv: Vec<String> = std::env::args().collect();
+                let action = get_action_from_argv(&argv);
+                let files = get_files_from_argv(argv);
+                match action.as_deref() {
+                    Some("watch") => {
+                        if let Some(path) = files.first() {
+                            let app_handle = app.handle().clone();
+                            let path_clone = path.clone();
+                            allow_file_in_scopes(&app_handle, vec![path.clone()]);
+                            app.listen("window-ready", move |_| {
+                                info!("[Setup] -> Launching with --action watch: {:?}", path_clone);
+                                set_window_open_with_watch(&app_handle, path_clone.clone());
+                            });
+                        }
+                    }
+                    _ => {
+                        if !files.is_empty() {
+                            let app_handle = app.handle().clone();
+                            allow_file_in_scopes(&app_handle, files.clone());
+                            app.listen("window-ready", move |_| {
+                                info!("[Setup] -> Launching with files: {:?}", files);
+                                set_window_open_with_files(&app_handle, files.clone());
+                            });
+                        }
+                    }
                 }
             }
             app.handle()

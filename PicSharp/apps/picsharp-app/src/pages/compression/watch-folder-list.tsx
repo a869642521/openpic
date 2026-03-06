@@ -1,4 +1,4 @@
-﻿import { memo, useContext, useState, useRef, useMemo } from 'react';
+﻿import { memo, useContext, useState, useRef, useMemo, useEffect } from 'react';
 import { useI18n } from '@/i18n';
 import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';
@@ -463,13 +463,21 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
 /** 监听文件夹列表（卡片集合 + 添加按钮） */
 function WatchFolderList() {
   const t = useI18n();
-  const { watchFolders, setWorking, addWatchFolder } = useCompressionStore(
-    useSelector(['watchFolders', 'setWorking', 'addWatchFolder']),
+  const { watchFolders, setWorking, addWatchFolder, pendingWatchPath, setPendingWatchPath } = useCompressionStore(
+    useSelector(['watchFolders', 'setWorking', 'addWatchFolder', 'pendingWatchPath', 'setPendingWatchPath']),
   );
   const { messageApi } = useContext(AppContext);
 
   const [addModeDialogOpen, setAddModeDialogOpen] = useState(false);
   const pendingPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (pendingWatchPath) {
+      handleAddFolder(pendingWatchPath);
+      setPendingWatchPath(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingWatchPath]);
 
   const handleAddFolder = async (path?: string) => {
     const { sidecar } = useAppStore.getState();

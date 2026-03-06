@@ -1,9 +1,10 @@
-import { Card } from '@/components/ui/card';
+﻿import { Card } from '@/components/ui/card';
 import Autostart from './autostart';
 import Language from './language';
 import Notification from './notification';
 import Section from '../section';
 import Update from './update';
+import ContextMenu from './context-menu';
 import { isMac } from '@/utils';
 import Privacy from './privacy';
 import { useEffect } from 'react';
@@ -24,6 +25,7 @@ export default function SettingsGeneral() {
   return (
     <Section>
       <Card>
+        <ContextMenu />
         <Language />
         <Notification />
         <Autostart />

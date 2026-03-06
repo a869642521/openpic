@@ -49,6 +49,7 @@ interface CompressionState {
   watchFiles: FileInfo[];
   watchFileMap: Map<string, FileInfo>;
   watchSelectedFiles: string[];
+  pendingWatchPath: string | null;
 }
 
 interface CompressionAction {
@@ -75,6 +76,7 @@ interface CompressionAction {
   resetClassic: () => void;
   resetWatch: () => void;
   resetWatchOnly: () => void;
+  setPendingWatchPath: (path: string | null) => void;
 }
 
 function syncViewFromMode(state: Partial<CompressionState>, mode: CompressionModeType) {
@@ -108,6 +110,11 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   watchSelectedFiles: [],
   inCompressing: false,
   currentBatchTimestamp: 0,
+  pendingWatchPath: null,
+
+  setPendingWatchPath: (path: string | null) => {
+    set({ pendingWatchPath: path });
+  },
 
   setCurrentBatchTimestamp: (ts: number) => {
     set({ currentBatchTimestamp: ts });
