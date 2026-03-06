@@ -4,9 +4,69 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import useAppStore from './app';
 import { clearImageViewerCache } from '@/components/image-viewer/cache';
 import { normalizePathForCompare } from '@/utils/fs';
-import { ConvertFormat, ResizeFit, ResizeMode, WatermarkType, WatermarkPosition, TinypngMetadata } from '@/constants';
+import { CompressionMode, CompressionOutputMode, CompressionType, ConvertFormat, ResizeFit, ResizeMode, WatermarkType, WatermarkPosition, TinypngMetadata } from '@/constants';
 
 export type CompressionModeType = 'classic' | 'watch';
+
+export interface ClassicSettings {
+  compressionMode: CompressionMode;
+  compressionType: CompressionType;
+  compressionLevel: number;
+  sizeFilterEnable: boolean;
+  sizeFilterValue: number;
+  thresholdEnable: boolean;
+  thresholdValue: number;
+  outputMode: CompressionOutputMode;
+  saveAsFileSuffix: string;
+  saveToFolder: string;
+  preserveMetadata: TinypngMetadata[];
+  convertEnable: boolean;
+  convertTypes: ConvertFormat[];
+  convertAlpha: string;
+  resizeEnable: boolean;
+  resizeMode: ResizeMode;
+  resizeScale: number;
+  resizeDimensions: [number, number];
+  resizeFit: ResizeFit;
+  watermarkType: WatermarkType;
+  watermarkPosition: WatermarkPosition;
+  watermarkText: string;
+  watermarkTextColor: string;
+  watermarkFontSize: number;
+  watermarkImagePath: string;
+  watermarkImageOpacity: number;
+  watermarkImageScale: number;
+}
+
+export const defaultClassicSettings: ClassicSettings = {
+  compressionMode: CompressionMode.Local,
+  compressionType: CompressionType.Lossy,
+  compressionLevel: 3,
+  sizeFilterEnable: false,
+  sizeFilterValue: 500,
+  thresholdEnable: false,
+  thresholdValue: 0.1,
+  outputMode: CompressionOutputMode.Overwrite,
+  saveAsFileSuffix: '_min',
+  saveToFolder: '',
+  preserveMetadata: [],
+  convertEnable: false,
+  convertTypes: [],
+  convertAlpha: '#FFFFFF',
+  resizeEnable: false,
+  resizeMode: ResizeMode.Scale,
+  resizeScale: 50,
+  resizeDimensions: [0, 0],
+  resizeFit: ResizeFit.Inside,
+  watermarkType: WatermarkType.None,
+  watermarkPosition: WatermarkPosition.BottomRight,
+  watermarkText: '',
+  watermarkTextColor: '#FFFFFF',
+  watermarkFontSize: 72,
+  watermarkImagePath: '',
+  watermarkImageOpacity: 1,
+  watermarkImageScale: 0.15,
+};
 
 export const defaultWatchFolderSettings: WatchFolderSettings = {
   compressionEnable: true,
@@ -30,12 +90,21 @@ export const defaultWatchFolderSettings: WatchFolderSettings = {
   watermarkImagePath: '',
   watermarkImageOpacity: 0.8,
   watermarkImageScale: 0.2,
+  compressionMode: CompressionMode.Local,
+  compressionLevel: 3,
+  compressionType: CompressionType.Lossless,
+  compressionOutput: CompressionOutputMode.Overwrite,
+  saveAsFileSuffix: '_min',
+  saveToFolder: '',
+  thresholdEnable: false,
+  thresholdValue: 0.1,
 };
 
 interface CompressionState {
   mode: CompressionModeType;
   working: boolean;
   inCompressing: boolean;
+  classicSettings: ClassicSettings;
   /** 最近一次压缩完成的时间戳，新拖入文件使用此值作为 batchId */
   currentBatchTimestamp: number;
   watchFolders: WatchFolder[];
@@ -54,6 +123,8 @@ interface CompressionState {
 
 interface CompressionAction {
   setMode: (mode: CompressionModeType) => void;
+  updateClassicSettings: (patch: Partial<ClassicSettings>) => void;
+  resetClassicSettings: () => void;
   setWorking: (value: boolean) => void;
   setInCompressing: (inCompressing: boolean) => void;
   setCurrentBatchTimestamp: (ts: number) => void;
@@ -111,6 +182,15 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
   inCompressing: false,
   currentBatchTimestamp: 0,
   pendingWatchPath: null,
+  classicSettings: { ...defaultClassicSettings },
+
+  updateClassicSettings: (patch: Partial<ClassicSettings>) => {
+    set((state) => ({ classicSettings: { ...state.classicSettings, ...patch } }));
+  },
+
+  resetClassicSettings: () => {
+    set({ classicSettings: { ...defaultClassicSettings } });
+  },
 
   setPendingWatchPath: (path: string | null) => {
     set({ pendingWatchPath: path });

@@ -14,7 +14,7 @@ import { parsePaths, humanSize, normalizePathForCompare } from '@/utils/fs';
 import { VALID_IMAGE_EXTS } from '@/constants';
 import { isValidArray, correctFloat } from '@/utils';
 import Compressor, { ICompressor } from '@/utils/compressor';
-import { SettingsKey, TinypngMetadata, ResizeMode } from '@/constants';
+import { SettingsKey, TinypngMetadata, ResizeMode, CompressionMode, CompressionOutputMode, CompressionType, WatermarkPosition } from '@/constants';
 import { isString } from 'radash';
 import { useI18n } from '@/i18n';
 import useSettingsStore from '@/store/settings';
@@ -64,20 +64,18 @@ function CompressionWatch() {
       const { sidecar, imageTempDir } = useAppStore.getState();
       const { fileMap, eventEmitter } = useCompressionStore.getState();
 
-      const {
-        [SettingsKey.TinypngApiKeys]: tinypngApiKeys,
-        [SettingsKey.CompressionMode]: compressionMode,
-        [SettingsKey.CompressionOutput]: outputMode,
-        [SettingsKey.CompressionOutputSaveToFolder]: saveToFolder,
-        [SettingsKey.CompressionOutputSaveAsFileSuffix]: saveAsFileSuffix,
-        [SettingsKey.CompressionThresholdEnable]: thresholdEnable,
-        [SettingsKey.CompressionThresholdValue]: thresholdValue,
-        [SettingsKey.CompressionLevel]: compressionLevel,
-        [SettingsKey.CompressionType]: compressionType,
-      } = useSettingsStore.getState();
+      const { [SettingsKey.TinypngApiKeys]: tinypngApiKeys } = useSettingsStore.getState();
 
-      // 使用文件夹独立设置（兼容旧版 keepMetadata boolean）
+      // 全部从文件夹独立设置读取（兼容旧版 keepMetadata boolean）
       const folderSettings = folder.settings;
+      const compressionMode = folderSettings.compressionMode ?? CompressionMode.Local;
+      const compressionLevel = folderSettings.compressionLevel ?? 3;
+      const compressionType = folderSettings.compressionType ?? CompressionType.Lossy;
+      const outputMode = folderSettings.compressionOutput ?? CompressionOutputMode.Overwrite;
+      const saveAsFileSuffix = folderSettings.saveAsFileSuffix ?? '_min';
+      const saveToFolder = folderSettings.saveToFolder ?? '';
+      const thresholdEnable = folderSettings.thresholdEnable ?? false;
+      const thresholdValue = folderSettings.thresholdValue ?? 0.1;
       const preserveMetadata =
         folderSettings.preserveMetadata ??
         ('keepMetadata' in folderSettings && (folderSettings as any).keepMetadata
@@ -93,7 +91,7 @@ function CompressionWatch() {
         resizeDimensions,
         resizeFit,
         watermarkType,
-        watermarkPosition,
+        watermarkPosition: watermarkPositionRaw,
         watermarkText,
         watermarkTextColor,
         watermarkFontSize,
@@ -101,6 +99,7 @@ function CompressionWatch() {
         watermarkImageOpacity,
         watermarkImageScale,
       } = folderSettings;
+      const watermarkPosition = watermarkPositionRaw as WatermarkPosition | undefined;
 
       eventEmitter.emit('update_file_item', 'all');
 

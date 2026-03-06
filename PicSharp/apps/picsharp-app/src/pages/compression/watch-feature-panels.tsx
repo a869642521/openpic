@@ -1,6 +1,6 @@
-﻿import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { useI18n } from '@/i18n';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,15 +12,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  CompressionMode,
+  CompressionOutputMode,
+  CompressionType,
   ConvertFormat,
   ResizeFit,
   ResizeMode,
+  TinypngMetadata,
   WatermarkType,
   WatermarkPosition,
 } from '@/constants';
 import { open } from '@tauri-apps/plugin-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { HelpCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { CheckboxGroup } from '@/components/checkbox-group';
 import { cn } from '@/lib/utils';
-import { parseSizeToKb } from '@/utils/fs';
 
 // ─── Shared style constants ───────────────────────────────────────────────────
 
@@ -206,71 +213,261 @@ interface FeaturePanelProps {
   onChange: (patch: Partial<WatchFolderSettings>) => void;
 }
 
-// ─── CompressionPanel ─────────────────────────────────────────────────────────
+// ─── CompressionPanel（与其他功能 UI 保持一致：SECTION_CLASS + ROW_CLASS）──────────
 
 export const CompressionPanel = memo(function CompressionPanel({
   settings: s,
   onChange,
 }: FeaturePanelProps) {
   const t = useI18n();
+  const skipModeSyncRef = useRef(false);
+  const skipSaveSyncRef = useRef(false);
+  const skipMetadataSyncRef = useRef(false);
+
   const [filterInput, setFilterInput] = useState(String(s.sizeFilterValue ?? 500));
+  const [modeTab, setModeTab] = useState<'auto' | 'filter'>(() =>
+    (s.sizeFilterEnable ?? false) ? 'filter' : 'auto',
+  );
+  const [saveTab, setSaveTab] = useState<'overwrite' | 'specify'>(() =>
+    s.compressionOutput === CompressionOutputMode.SaveToNewFolder ? 'specify' : 'overwrite',
+  );
+  const [metadataTab, setMetadataTab] = useState<'no' | 'yes'>(() =>
+    (s.preserveMetadata?.length ?? 0) > 0 ? 'yes' : 'no',
+  );
+
+  useEffect(() => {
+    if (skipModeSyncRef.current) {
+      skipModeSyncRef.current = false;
+      return;
+    }
+    setModeTab((s.sizeFilterEnable ?? false) ? 'filter' : 'auto');
+  }, [s.sizeFilterEnable]);
 
   useEffect(() => {
     setFilterInput(String(s.sizeFilterValue ?? 500));
   }, [s.sizeFilterValue]);
 
+  useEffect(() => {
+    if (skipSaveSyncRef.current) {
+      skipSaveSyncRef.current = false;
+      return;
+    }
+    setSaveTab(s.compressionOutput === CompressionOutputMode.SaveToNewFolder ? 'specify' : 'overwrite');
+  }, [s.compressionOutput]);
+
+  useEffect(() => {
+    if (skipMetadataSyncRef.current) {
+      skipMetadataSyncRef.current = false;
+      return;
+    }
+    setMetadataTab((s.preserveMetadata?.length ?? 0) > 0 ? 'yes' : 'no');
+  }, [s.preserveMetadata]);
+
   const handleFilterBlur = () => {
-    const kb = parseSizeToKb(filterInput);
-    const final = kb >= 1 ? kb : 500;
+    const num = Number(filterInput);
+    const valid = Number.isFinite(num) && num >= 1;
+    const final = valid ? Math.floor(num) : 500;
     onChange({ sizeFilterValue: final });
     setFilterInput(String(final));
   };
 
+  const compressionType = s.compressionType ?? CompressionType.Lossless;
+  const compressionLevel = s.compressionLevel ?? 3;
+  const saveToFolder = s.saveToFolder ?? '';
+  const preserveMetadata = s.preserveMetadata ?? [];
+
+  const handleChooseSaveFolder = async () => {
+    const dir = await open({ multiple: false, directory: true });
+    if (dir) onChange({ saveToFolder: dir as string });
+  };
+
   return (
-    <div className={SECTION_CLASS}>
-      <div className={cn(ROW_CLASS, 'mb-0')}>
-        <p className='text-sm font-semibold'>
-          {t('page.compression.watch.folder.settings.compression')}
-        </p>
+    <div className={cn(SECTION_CLASS, 'space-y-3')}>
+      <p className='text-sm font-semibold'>
+        {t('page.compression.watch.folder.settings.compression')}
+      </p>
+
+      {/* 压缩选项：自动/过滤 */}
+      <div className={ROW_CLASS}>
+        <Label className={LABEL_CLASS}>{t('compression.options.title')}</Label>
         <Tabs
-          value={s.sizeFilterEnable ? 'filter' : 'auto'}
+          value={modeTab}
           activationMode='manual'
-          onValueChange={(v) => onChange({ sizeFilterEnable: v === 'filter' })}
+          onValueChange={(v) => {
+            const next = v as 'auto' | 'filter';
+            if (next === modeTab) return;
+            skipModeSyncRef.current = true;
+            setModeTab(next);
+            onChange({ sizeFilterEnable: next === 'filter' });
+          }}
         >
           <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
-            <TabsTrigger
-              value='auto'
-              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
-            >
+            <TabsTrigger value='auto' className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'>
               {t('compression.options.mode.auto')}
             </TabsTrigger>
-            <TabsTrigger
-              value='filter'
-              className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'
-            >
+            <TabsTrigger value='filter' className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'>
               {t('compression.options.mode.filter')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
-      {s.sizeFilterEnable && (
-        <div className='mt-3'>
+
+      {modeTab === 'auto' && (
+        <>
           <div className={ROW_CLASS}>
-            <Label className={LABEL_CLASS}>
-              {t('page.compression.watch.folder.settings.size_filter')}
-            </Label>
-            <div className='flex h-8 w-[350px] items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
-              <Input
-                type='text'
-                value={filterInput}
-                placeholder='500'
-                onChange={(e) => setFilterInput(e.target.value)}
-                onBlur={handleFilterBlur}
-                className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
-              />
-              <span className='shrink-0 text-xs text-neutral-400'>KB</span>
-            </div>
+            <Label className={LABEL_CLASS}>{t('compression.options.compression_type')}</Label>
+            <Select
+              value={compressionType}
+              onValueChange={(v) => onChange({ compressionType: v as CompressionType })}
+            >
+              <SelectTrigger className='h-8 w-[300px] shrink-0 text-xs'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={CompressionType.Lossless} className='text-xs'>
+                  {t('settings.compression.type.option.lossless')}
+                </SelectItem>
+                <SelectItem value={CompressionType.Lossy} className='text-xs'>
+                  {t('settings.compression.type.option.lossy')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          {compressionType === CompressionType.Lossy && (
+            <div className={ROW_CLASS}>
+              <Label className={LABEL_CLASS}>{t('settings.compression.level.title')}</Label>
+              <Select
+                value={String(compressionLevel)}
+                onValueChange={(v) => onChange({ compressionLevel: Number(v) })}
+              >
+                <SelectTrigger className='h-8 w-[300px] shrink-0 text-xs'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <SelectItem key={n} value={String(n)} className='text-xs'>
+                      {t(`settings.compression.level.option.${n}` as any)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </>
+      )}
+
+      {modeTab === 'filter' && (
+        <div className={ROW_CLASS}>
+          <Label className='flex shrink-0 items-center gap-1'>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className='h-3.5 w-3.5 cursor-help text-neutral-500' />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className='max-w-[200px]'>{t('compression.options.size_filter.description')}</p>
+              </TooltipContent>
+            </Tooltip>
+            <span className={LABEL_CLASS}>{t('compression.options.size_filter.label')}</span>
+          </Label>
+          <div className='flex h-8 w-[300px] items-center gap-1 rounded-md border px-2 text-xs' style={{ borderColor: 'rgb(219,219,220)' }}>
+            <Input
+              type='number'
+              min={1}
+              value={filterInput}
+              placeholder='500'
+              onChange={(e) => setFilterInput(e.target.value)}
+              onBlur={handleFilterBlur}
+              className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+            />
+            <span className='shrink-0 text-neutral-400'>KB</span>
+          </div>
+        </div>
+      )}
+
+      {/* 保存方式 */}
+      <div className={ROW_CLASS}>
+        <Label className={LABEL_CLASS}>{t('compression.options.save_mode.title')}</Label>
+        <Tabs
+          value={saveTab}
+          activationMode='manual'
+          onValueChange={(v) => {
+            const next = v as 'overwrite' | 'specify';
+            if (next === saveTab) return;
+            skipSaveSyncRef.current = true;
+            setSaveTab(next);
+            onChange({ compressionOutput: next === 'overwrite' ? CompressionOutputMode.Overwrite : CompressionOutputMode.SaveToNewFolder });
+          }}
+        >
+          <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
+            <TabsTrigger value='overwrite' className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'>
+              {t('compression.options.save_mode.overwrite')}
+            </TabsTrigger>
+            <TabsTrigger value='specify' className='flex-1 h-full rounded-full text-xs data-[state=active]:bg-black data-[state=active]:text-white'>
+              {t('compression.options.save_mode.specify')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {saveTab === 'specify' && (
+        <div className='space-y-1.5'>
+          {saveToFolder && (
+            <p className='truncate text-xs text-neutral-500' title={saveToFolder}>{saveToFolder}</p>
+          )}
+          <Button
+            variant='outline'
+            size='sm'
+            className='h-8 w-full text-xs'
+            style={{ backgroundColor: 'rgb(245, 246, 247)' }}
+            onClick={handleChooseSaveFolder}
+          >
+            {t('settings.compression.output.option.save_to_new_folder.choose')}
+          </Button>
+        </div>
+      )}
+
+      {/* 保留元数据 */}
+      <div className={ROW_CLASS}>
+        <div className='flex shrink-0 items-center gap-1.5'>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className='inline-flex cursor-help text-neutral-400 hover:text-neutral-600'>
+                <HelpCircle className='h-3.5 w-3.5' />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side='top' className='max-w-[300px] whitespace-pre-line text-xs leading-relaxed'>
+              {t('compression.options.keep_metadata.help')}
+            </TooltipContent>
+          </Tooltip>
+          <span className={LABEL_CLASS}>{t('compression.options.keep_metadata.title')}</span>
+        </div>
+        <YesNoTabs
+          value={metadataTab === 'yes'}
+          onChange={(v) => {
+            const next = v ? 'yes' : 'no';
+            if (next === metadataTab) return;
+            skipMetadataSyncRef.current = true;
+            setMetadataTab(next);
+            onChange({
+              preserveMetadata: v
+                ? [TinypngMetadata.Copyright, TinypngMetadata.Creator, TinypngMetadata.Location]
+                : [],
+            });
+          }}
+        />
+      </div>
+
+      {metadataTab === 'yes' && (
+        <div className='pt-1'>
+          <CheckboxGroup
+            options={[
+              { value: TinypngMetadata.Copyright, label: t('settings.tinypng.metadata.copyright') },
+              { value: TinypngMetadata.Creator, label: t('settings.tinypng.metadata.creator') },
+              { value: TinypngMetadata.Location, label: t('settings.tinypng.metadata.location') },
+            ]}
+            value={preserveMetadata}
+            onChange={(v) => onChange({ preserveMetadata: v as TinypngMetadata[] })}
+          />
         </div>
       )}
     </div>
@@ -284,7 +481,6 @@ export const ConvertPanel = memo(function ConvertPanel({
   onChange,
 }: FeaturePanelProps) {
   const t = useI18n();
-
   const currentFormat = s.convertTypes[0] ?? ConvertFormat.Webp;
 
   return (
@@ -297,7 +493,7 @@ export const ConvertPanel = memo(function ConvertPanel({
           value={currentFormat}
           onValueChange={(v) => onChange({ convertTypes: [v as ConvertFormat] })}
         >
-          <SelectTrigger className='h-8 w-[350px] shrink-0 text-xs'>
+          <SelectTrigger className='h-8 w-[300px] shrink-0 text-xs'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -425,7 +621,7 @@ export const ResizePanel = memo(function ResizePanel({
                 {t('compression.options.resize.scale_label')}
               </Label>
               <div
-                className='flex h-8 w-[350px] items-center gap-1 rounded-md border px-2 text-xs'
+                className='flex h-8 w-[300px] items-center gap-1 rounded-md border px-2 text-xs'
                 style={{ borderColor: 'rgb(219,219,220)' }}
               >
                 <Input
@@ -455,7 +651,7 @@ export const ResizePanel = memo(function ResizePanel({
                 <Label className={LABEL_CLASS}>
                   {t('compression.options.resize.dimensions_label')}
                 </Label>
-                <div className='flex w-[350px] items-center gap-3'>
+                <div className='flex w-[300px] items-center gap-3'>
                   <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
                     <Input
                       type='number'
@@ -488,7 +684,7 @@ export const ResizePanel = memo(function ResizePanel({
                 <Label className={LABEL_CLASS}>
                   {t('compression.options.resize.fit_label')}
                 </Label>
-                <div className='flex w-[350px] gap-2'>
+                <div className='flex w-[300px] gap-2'>
                   {RESIZE_FIT_OPTIONS.map(({ fit, nameKey, descKey, icon }) => {
                     const active = s.resizeFit === fit;
                     return (
@@ -512,7 +708,7 @@ export const ResizePanel = memo(function ResizePanel({
                               : 'text-neutral-600 dark:text-neutral-400',
                           )}
                         >
-                          {t(nameKey)}
+                          {t(nameKey as any)}
                         </span>
                         <span
                           className={cn(
@@ -522,7 +718,7 @@ export const ResizePanel = memo(function ResizePanel({
                               : 'text-neutral-400 dark:text-neutral-500',
                           )}
                         >
-                          {t(descKey)}
+                          {t(descKey as any)}
                         </span>
                       </button>
                     );
@@ -532,7 +728,7 @@ export const ResizePanel = memo(function ResizePanel({
             </>
           )}
         </div>
-      </div>
+    </div>
   );
 });
 
@@ -593,7 +789,7 @@ export const WatermarkPanel = memo(function WatermarkPanel({
                 <Input
                   value={s.watermarkText}
                   onChange={(e) => onChange({ watermarkText: e.target.value })}
-                  className='h-8 w-[350px] text-xs'
+                  className='h-8 w-[300px] text-xs'
                   placeholder={t('page.compression.watch.folder.settings.watermark_text_placeholder')}
                 />
               </div>
@@ -602,7 +798,7 @@ export const WatermarkPanel = memo(function WatermarkPanel({
                 <Label className={LABEL_CLASS}>
                   {t('page.compression.watch.folder.settings.watermark_size')}
                 </Label>
-                <div className='flex h-8 w-[350px] items-center gap-2'>
+                <div className='flex h-8 w-[300px] items-center gap-2'>
                   <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
                     <Input
                       type='number'
@@ -643,7 +839,7 @@ export const WatermarkPanel = memo(function WatermarkPanel({
                 <Button
                   variant='outline'
                   size='sm'
-                  className='h-8 w-[350px] truncate text-xs'
+                  className='h-8 w-[300px] truncate text-xs'
                   onClick={handleChooseWatermarkImage}
                   title={s.watermarkImagePath}
                 >
@@ -656,7 +852,7 @@ export const WatermarkPanel = memo(function WatermarkPanel({
                 <Label className={LABEL_CLASS}>
                   {t('page.compression.watch.folder.settings.watermark_opacity')}
                 </Label>
-                <div className='flex w-[350px] items-center gap-3'>
+                <div className='flex w-[300px] items-center gap-3'>
                   <div className='flex h-8 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 dark:border-neutral-600 dark:bg-neutral-900'>
                     <Input
                       type='number'
@@ -704,6 +900,6 @@ export const WatermarkPanel = memo(function WatermarkPanel({
             />
           </div>
         </div>
-      </div>
+    </div>
   );
 });

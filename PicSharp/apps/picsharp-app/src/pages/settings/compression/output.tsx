@@ -118,7 +118,7 @@ function SettingsCompressionOutput() {
           description={t('settings.compression.output.option.save_to_new_folder.description')}
         >
           <div className='flex flex-col items-end gap-y-2'>
-            <Button className='w-[auto]' size={'sm'} onClick={handleChooseFolder}>
+            <Button className='w-[auto]' size={'sm'} style={{ backgroundColor: 'rgb(245, 246, 247)' }} onClick={handleChooseFolder}>
               {t('settings.compression.output.option.save_to_new_folder.choose')}
             </Button>
             <div className='flex items-center gap-x-2'>

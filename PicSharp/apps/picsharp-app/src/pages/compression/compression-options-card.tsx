@@ -1,8 +1,7 @@
 import { memo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useI18n } from '@/i18n';
-import useSettingsStore from '@/store/settings';
-import useSelector from '@/hooks/useSelector';
-import { SettingsKey, CompressionOutputMode, CompressionType, ConvertFormat, TinypngMetadata, ResizeMode, ResizeFit } from '@/constants';
+import useCompressionStore from '@/store/compression';
+import { CompressionOutputMode, CompressionType, ConvertFormat, TinypngMetadata, ResizeMode, ResizeFit } from '@/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -48,40 +47,22 @@ function CompressionOptionsCard() {
     if (hintsExpanded) resizeHints();
   }, [hintsExpanded, commonHints]);
   const {
-    [SettingsKey.CompressionSizeFilterEnable]: sizeFilterEnable,
-    [SettingsKey.CompressionSizeFilterValue]: sizeFilterValue,
-    [SettingsKey.CompressionType]: compressionType,
-    [SettingsKey.CompressionLevel]: compressionLevel,
-    [SettingsKey.CompressionOutput]: outputMode,
-    [SettingsKey.CompressionOutputSaveToFolder]: saveToFolder,
-    [SettingsKey.CompressionKeepMetadata]: preserveMetadata,
-    [SettingsKey.CompressionConvertEnable]: convertEnable,
-    [SettingsKey.CompressionConvert]: convertTypes,
-    [SettingsKey.CompressionResizeEnable]: resizeEnable,
-    [SettingsKey.CompressionResizeMode]: resizeMode,
-    [SettingsKey.CompressionResizeScale]: resizeScale,
-    [SettingsKey.CompressionResizeDimensions]: resizeDimensions,
-    [SettingsKey.CompressionResizeFit]: resizeFit,
-    set,
-  } = useSettingsStore(
-    useSelector([
-      SettingsKey.CompressionSizeFilterEnable,
-      SettingsKey.CompressionSizeFilterValue,
-      SettingsKey.CompressionType,
-      SettingsKey.CompressionLevel,
-      SettingsKey.CompressionOutput,
-      SettingsKey.CompressionOutputSaveToFolder,
-      SettingsKey.CompressionKeepMetadata,
-      SettingsKey.CompressionConvertEnable,
-      SettingsKey.CompressionConvert,
-      SettingsKey.CompressionResizeEnable,
-      SettingsKey.CompressionResizeMode,
-      SettingsKey.CompressionResizeScale,
-      SettingsKey.CompressionResizeDimensions,
-      SettingsKey.CompressionResizeFit,
-      'set',
-    ]),
-  );
+    sizeFilterEnable,
+    sizeFilterValue,
+    compressionType,
+    compressionLevel,
+    outputMode,
+    saveToFolder,
+    preserveMetadata,
+    convertEnable,
+    convertTypes,
+    resizeEnable,
+    resizeMode,
+    resizeScale,
+    resizeDimensions,
+    resizeFit,
+  } = useCompressionStore((s) => s.classicSettings);
+  const { updateClassicSettings } = useCompressionStore.getState();
 
   const [filterInput, setFilterInput] = useState(() => String(sizeFilterValue));
   const [modeTab, setModeTab] = useState<'auto' | 'filter'>(() =>
@@ -168,7 +149,7 @@ function CompressionOptionsCard() {
       (!saveToFolder || saveToFolder.trim() === '')
     ) {
       const downloadDirPath = await downloadDir();
-      set(SettingsKey.CompressionOutputSaveToFolder, downloadDirPath);
+      updateClassicSettings({ saveToFolder: downloadDirPath });
     }
   }, [outputMode, saveToFolder]);
 
@@ -178,7 +159,7 @@ function CompressionOptionsCard() {
       directory: true,
     });
     if (file) {
-      set(SettingsKey.CompressionOutputSaveToFolder, file);
+      updateClassicSettings({ saveToFolder: file });
     }
   };
 
@@ -194,7 +175,7 @@ function CompressionOptionsCard() {
             skipModeSyncRef.current = true;
             setModeTab(next);
             const isFilter = next === 'filter';
-            set(SettingsKey.CompressionSizeFilterEnable, isFilter);
+            updateClassicSettings({ sizeFilterEnable: isFilter });
           }}
         >
           <CardHeader
@@ -217,7 +198,7 @@ function CompressionOptionsCard() {
                 <Label className='shrink-0 text-xs'>{t('compression.options.compression_type')}</Label>
                 <Select
                   value={compressionType}
-                  onValueChange={(v) => set(SettingsKey.CompressionType, v as CompressionType)}
+                  onValueChange={(v) => updateClassicSettings({ compressionType: v as CompressionType })}
                 >
                   <SelectTrigger
                     className='h-10 w-[140px] shrink-0 border shadow-none text-xs'
@@ -240,7 +221,7 @@ function CompressionOptionsCard() {
                   <Label className='shrink-0 text-xs'>{t('settings.compression.level.title')}</Label>
                   <Select
                     value={String(compressionLevel)}
-                    onValueChange={(v) => set(SettingsKey.CompressionLevel, Number(v))}
+                    onValueChange={(v) => updateClassicSettings({ compressionLevel: Number(v) })}
                   >
                     <SelectTrigger
                       className='h-10 w-[140px] shrink-0 border shadow-none text-xs'
@@ -251,7 +232,7 @@ function CompressionOptionsCard() {
                     <SelectContent>
                       {[1, 2, 3, 4, 5].map((n) => (
                         <SelectItem key={n} value={String(n)} className='text-xs'>
-                          {t(`settings.compression.level.option.${n}`)}
+                          {t(`settings.compression.level.option.${n}` as any)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -286,7 +267,7 @@ function CompressionOptionsCard() {
                       const num = Number(filterInput);
                       const valid = Number.isFinite(num) && num >= 1;
                       const final = valid ? Math.floor(num) : 500;
-                      set(SettingsKey.CompressionSizeFilterValue, final);
+                      updateClassicSettings({ sizeFilterValue: final });
                       setFilterInput(String(final));
                     }}
                     className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
@@ -343,10 +324,9 @@ function CompressionOptionsCard() {
             if (next === saveTab) return;
             skipSaveSyncRef.current = true;
             setSaveTab(next);
-            set(
-              SettingsKey.CompressionOutput,
-              next === 'overwrite' ? CompressionOutputMode.Overwrite : CompressionOutputMode.SaveToNewFolder,
-            );
+            updateClassicSettings({
+              outputMode: next === 'overwrite' ? CompressionOutputMode.Overwrite : CompressionOutputMode.SaveToNewFolder,
+            });
           }}
         >
           <CardHeader
@@ -394,7 +374,7 @@ function CompressionOptionsCard() {
                   variant='outline'
                   size='sm'
                   className='h-10 w-full border shadow-none text-xs'
-                  style={{ borderColor: 'rgb(219, 219, 220)' }}
+                  style={{ borderColor: 'rgb(219, 219, 220)', backgroundColor: 'rgb(245, 246, 247)' }}
                   onClick={handleChooseFolder}
                 >
                   {t('settings.compression.output.option.save_to_new_folder.choose')}
@@ -414,12 +394,11 @@ function CompressionOptionsCard() {
             if (next === metadataTab) return;
             skipMetadataSyncRef.current = true;
             setMetadataTab(next);
-            set(
-              SettingsKey.CompressionKeepMetadata,
-              next === 'yes'
+            updateClassicSettings({
+              preserveMetadata: next === 'yes'
                 ? [TinypngMetadata.Copyright, TinypngMetadata.Creator, TinypngMetadata.Location]
                 : [],
-            );
+            });
           }}
         >
           <CardHeader
@@ -463,7 +442,7 @@ function CompressionOptionsCard() {
                   { value: TinypngMetadata.Location, label: t('settings.tinypng.metadata.location') },
                 ]}
                 value={preserveMetadata}
-                onChange={(v) => set(SettingsKey.CompressionKeepMetadata, v)}
+                onChange={(v) => updateClassicSettings({ preserveMetadata: v as TinypngMetadata[] })}
               />
             </CardContent>
           )}
@@ -479,7 +458,7 @@ function CompressionOptionsCard() {
             if (next === resizeTab) return;
             skipResizeSyncRef.current = true;
             setResizeTab(next);
-            set(SettingsKey.CompressionResizeEnable, next === 'yes');
+            updateClassicSettings({ resizeEnable: next === 'yes' });
           }}
         >
           <CardHeader
@@ -513,7 +492,7 @@ function CompressionOptionsCard() {
                       key={mode}
                       onClick={() => {
                         setResizeModeTab(mode);
-                        set(SettingsKey.CompressionResizeMode, mode);
+                        updateClassicSettings({ resizeMode: mode });
                       }}
                       className={[
                         'flex-1 rounded-full border py-1.5 text-xs font-medium transition-colors',
@@ -543,13 +522,13 @@ function CompressionOptionsCard() {
                       max={99}
                       value={scaleInput}
                       onChange={(e) => setScaleInput(e.target.value)}
-                      onBlur={() => {
-                        const num = Number(scaleInput);
-                        const valid = Number.isFinite(num) && num >= 1 && num <= 99;
-                        const final = valid ? Math.floor(num) : 50;
-                        set(SettingsKey.CompressionResizeScale, final);
-                        setScaleInput(String(final));
-                      }}
+                        onBlur={() => {
+                          const num = Number(scaleInput);
+                          const valid = Number.isFinite(num) && num >= 1 && num <= 99;
+                          const final = valid ? Math.floor(num) : 50;
+                          updateClassicSettings({ resizeScale: final });
+                          setScaleInput(String(final));
+                        }}
                       className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
                     />
                     <span className='shrink-0 text-xs text-neutral-500'>%</span>
@@ -575,7 +554,7 @@ function CompressionOptionsCard() {
                           const num = Number(widthInput);
                           const valid = Number.isFinite(num) && num >= 0;
                           const final = valid ? Math.floor(num) : 0;
-                          set(SettingsKey.CompressionResizeDimensions, [final, resizeDimensions?.[1] ?? 0]);
+                          updateClassicSettings({ resizeDimensions: [final, resizeDimensions?.[1] ?? 0] });
                           setWidthInput(String(final));
                         }}
                         className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
@@ -599,7 +578,7 @@ function CompressionOptionsCard() {
                           const num = Number(heightInput);
                           const valid = Number.isFinite(num) && num >= 0;
                           const final = valid ? Math.floor(num) : 0;
-                          set(SettingsKey.CompressionResizeDimensions, [resizeDimensions?.[0] ?? 0, final]);
+                          updateClassicSettings({ resizeDimensions: [resizeDimensions?.[0] ?? 0, final] });
                           setHeightInput(String(final));
                         }}
                         className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
@@ -611,7 +590,7 @@ function CompressionOptionsCard() {
                     <Label className='shrink-0 text-xs'>{t('compression.options.resize.fit_label')}</Label>
                     <Select
                       value={resizeFit}
-                      onValueChange={(v) => set(SettingsKey.CompressionResizeFit, v as ResizeFit)}
+                      onValueChange={(v) => updateClassicSettings({ resizeFit: v as ResizeFit })}
                     >
                       <SelectTrigger
                         className='h-10 w-[140px] shrink-0 border shadow-none text-xs'
@@ -644,11 +623,10 @@ function CompressionOptionsCard() {
             if (next === convertTab) return;
             skipConvertSyncRef.current = true;
             setConvertTab(next);
-            set(SettingsKey.CompressionConvertEnable, next === 'yes');
             if (next === 'no') {
-              set(SettingsKey.CompressionConvert, []);
-            } else if (convertTypes.length === 0) {
-              set(SettingsKey.CompressionConvert, [ConvertFormat.Webp]);
+              updateClassicSettings({ convertEnable: false, convertTypes: [] });
+            } else {
+              updateClassicSettings({ convertEnable: true, convertTypes: convertTypes.length === 0 ? [ConvertFormat.Webp] : convertTypes });
             }
           }}
         >
@@ -678,7 +656,7 @@ function CompressionOptionsCard() {
                 <Label className='shrink-0 text-xs'>{t('compression.options.convert.format_label')}</Label>
                 <Select
                   value={convertTypes[0] ?? ConvertFormat.Webp}
-                  onValueChange={(v) => set(SettingsKey.CompressionConvert, [v as ConvertFormat])}
+                  onValueChange={(v) => updateClassicSettings({ convertTypes: [v as ConvertFormat] })}
                 >
                   <SelectTrigger
                     className='h-10 w-[140px] shrink-0 border shadow-none text-xs'

@@ -10,10 +10,12 @@ import Resize from './resize';
 import Watermark from './watermark';
 import { useReport } from '@/hooks/useReport';
 import useSettingsStore from '@/store/settings';
+import { useI18n } from '@/i18n';
 
 export default function SettingsCompression() {
   const outputElRef = useRef<HTMLDivElement>(null);
   const r = useReport();
+  const t = useI18n();
 
   useEffect(() => {
     const state = useSettingsStore.getState();
@@ -45,6 +47,9 @@ export default function SettingsCompression() {
 
   return (
     <Section>
+      <p className='text-xs leading-relaxed text-neutral-500 dark:text-neutral-400'>
+        {t('settings.compression.context_menu_hint')}
+      </p>
       <Card>
         <Mode />
       </Card>

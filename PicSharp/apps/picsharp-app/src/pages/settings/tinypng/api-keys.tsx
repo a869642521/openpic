@@ -199,7 +199,7 @@ export default memo(function SettingsCompressionTinyPngApiKeys() {
           <AddApiKeyDialog />
         </div>
       </SettingItem>
-      <CardContent className='px-4 pb-0'>
+      <CardContent className='pb-0'>
         {isValidArray(tinypngApiKeys) ? (
           loading ? (
             <div className='w-full space-y-2'>

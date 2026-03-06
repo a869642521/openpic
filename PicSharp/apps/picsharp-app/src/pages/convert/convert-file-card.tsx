@@ -19,7 +19,7 @@ function ConvertFileCard({ path }: ConvertFileCardProps) {
   useEffect(() => {
     const handler = () => update();
     eventEmitter.on('update_file_item', handler);
-    return () => eventEmitter.off('update_file_item', handler);
+    return () => { eventEmitter.off('update_file_item', handler); };
   }, [eventEmitter, update]);
 
   if (!file) return null;

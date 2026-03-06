@@ -274,13 +274,9 @@ pub fn run() {
                                 .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_watch_silent: {}", e));
                         }
                     }
-                    Some("settings-compress") => {
-                        app.emit("ns_settings_compress", ())
-                            .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_settings_compress: {}", e));
-                    }
-                    Some("settings-watch") => {
-                        app.emit("ns_settings_watch", ())
-                            .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_settings_watch: {}", e));
+                    Some("settings") => {
+                        app.emit("ns_settings", ())
+                            .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_settings: {}", e));
                     }
                     _ => {
                         if !files.is_empty() {
@@ -412,18 +408,11 @@ pub fn run() {
                             });
                         }
                     }
-                    Some("settings-compress") => {
+                    Some("settings") => {
                         let app_handle = app.handle().clone();
                         app.listen("window-ready", move |_| {
-                            info!("[Setup] -> Launching with --action settings-compress");
-                            set_window_open_with_payload(&app_handle, "settings-compress", vec![]);
-                        });
-                    }
-                    Some("settings-watch") => {
-                        let app_handle = app.handle().clone();
-                        app.listen("window-ready", move |_| {
-                            info!("[Setup] -> Launching with --action settings-watch");
-                            set_window_open_with_payload(&app_handle, "settings-watch", vec![]);
+                            info!("[Setup] -> Launching with --action settings");
+                            set_window_open_with_payload(&app_handle, "settings", vec![]);
                         });
                     }
                     _ => {

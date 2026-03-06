@@ -1,16 +1,14 @@
-﻿import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import Autostart from './autostart';
 import Language from './language';
 import Notification from './notification';
 import Section from '../section';
 import Update from './update';
-import ContextMenu from './context-menu';
-import ContextMenuDefaultsDialog from './context-menu-defaults-dialog';
-import { isMac } from '@/utils';
-import Privacy from './privacy';
+import Mode from '../compression/mode';
 import { useEffect } from 'react';
 import { useReport } from '@/hooks/useReport';
 import useSettingsStore from '@/store/settings';
+
 export default function SettingsGeneral() {
   const r = useReport();
 
@@ -24,18 +22,14 @@ export default function SettingsGeneral() {
   }, []);
 
   return (
-    <>
     <Section>
       <Card>
-        <ContextMenu />
         <Language />
         <Notification />
+        <Mode />
         <Autostart />
         <Update />
-        {/* <Privacy /> */}
       </Card>
     </Section>
-    <ContextMenuDefaultsDialog />
-    </>
   );
 }

@@ -1,4 +1,4 @@
-﻿const enUS = {
+const enUS = {
   // Common
   'common.no_image_to_compress': 'No images to compress',
   'common.drag_and_drop': 'Drop to compress',
@@ -51,14 +51,33 @@
   'settings.general.autostart.title': 'Launch at Startup',
   'settings.general.autostart.description':
     'Automatically start the application when the system starts.',
-  'settings.general.context_menu.title': 'Context Menu Integration',
-  'settings.general.context_menu.defaults_dialog.title': 'Context Menu Default Settings',
-  'settings.general.context_menu.defaults_dialog.tab_compress': 'Compress Defaults',
-  'settings.general.context_menu.defaults_dialog.tab_watch': 'Watch Defaults',
-  'settings.general.context_menu.defaults_dialog.compress_section': 'Compression Mode',
-  'settings.general.context_menu.defaults_dialog.output_section': 'Output Mode',
-  'settings.general.context_menu.description':
-    'Add "Compress with PicSharp" and "Watch with PicSharp" to folder right-click menu (Windows only).',
+  // Settings.ContextMenu (dedicated tab)
+  'settings.context_menu.nav_title': 'Quick Actions',
+  'settings.context_menu.title': 'Context Menu Integration',
+  'settings.context_menu.description': 'Add PicSharp quick actions to folder right-click menu (Windows only).',
+  'settings.context_menu.not_supported': 'Context menu integration is only supported on Windows.',
+  'settings.context_menu.features_title': 'Menu Actions',
+  'settings.context_menu.features_desc': 'When enabled, right-clicking a folder will show these quick actions:',
+  'settings.context_menu.feature_compress_title': 'Background Compress',
+  'settings.context_menu.feature_compress_desc': 'Compress all images in the folder using current settings, with real-time progress in a bottom-right notification.',
+  'settings.context_menu.feature_watch_title': 'Background Watch',
+  'settings.context_menu.feature_watch_desc': 'Add the folder to the watch list, automatically processing new and changed image files.',
+  'settings.context_menu.feature_settings_title': 'Open Settings',
+  'settings.context_menu.feature_settings_desc': 'Quickly open PicSharp settings to adjust compression parameters.',
+  'settings.context_menu.compression_settings_title': 'Compression Settings',
+  'settings.context_menu.compression_settings_desc': 'These settings only apply to the right-click menu "Background Compress" feature.',
+  'settings.context_menu.settings_info_title': 'Settings Info',
+  'settings.context_menu.settings_info_desc': 'Click the link below to configure TinyPNG API keys.',
+  'settings.context_menu.go_compression': 'Compression Settings',
+  'settings.context_menu.go_tinypng': 'TinyPNG Settings',
+  // Background compress/watch notifications
+  'bg_compress.no_images': 'No compressible image files found.',
+  'bg_compress.progress_title': 'Compressing...',
+  'bg_compress.completed_title': 'Compression Complete',
+  'bg_compress.completed_desc': 'Compressed {fulfilled}, failed {rejected}, total {total}, saved {saved}',
+  'bg_compress.failed': 'Compression failed, please check the logs.',
+  'bg_watch.started_title': 'Watch Started',
+  'bg_watch.started_desc': 'Now watching folder: {folder}',
   // Settings.General.Update
   'settings.general.update.title': 'Auto Check Update',
   'settings.general.update.description':
@@ -67,8 +86,9 @@
   'settings.general.privacy.title': 'Privacy Mode',
   'settings.general.privacy.description':
     'When privacy mode is enabled, the application will not collect any data.',
-  // Settings.Compression
-  'settings.compression.title': 'Compression',
+  // Settings.Compression (Shortcut Actions)
+  'settings.compression.title': 'Shortcut Compression',
+  'settings.compression.context_menu_hint': 'These settings only apply to the right-click menu "Background Compress" feature. Batch compression and watch mode each have their own independent settings.',
   // Settings.Compression.Concurrency
   'settings.compression.concurrency.title': 'Concurrency',
   'settings.compression.concurrency.description': 'The number of concurrent compression tasks.',
@@ -127,6 +147,7 @@
   'compression.options.save_mode.overwrite': 'Overwrite',
   'compression.options.save_mode.specify': 'Specify',
   'compression.options.save_mode.overwrite_hint': 'Original images will be overwritten after compression',
+  'compression.options.save_mode.specify_empty_hint': 'Please select a folder',
   'compression.options.size_filter.all_skipped': 'All {{count}} images are smaller than the filter threshold, skipped',
   'compression.options.common_hints.title': 'My common compression sizes',
   'compression.options.common_hints.placeholder': 'e.g. 500KB, 80%',

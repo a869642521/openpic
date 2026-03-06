@@ -4,7 +4,7 @@
   "auto_check_update": true,
   "privacy_mode": false,
   "compression_mode": "local",
-  "compression_type": "lossy",
+  "compression_type": "lossless",
   "compression_level": 3,
   "compression_keep_metadata": ["copyright", "creator", "location"],
   "concurrency": 6,

@@ -1,10 +1,11 @@
 import { PropsWithChildren, ReactNode } from 'react';
-import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 export type SettingItemProps = PropsWithChildren<{
   id?: string;
   className?: string;
+  icon?: ReactNode;
   title: ReactNode;
   titleClassName?: string;
   description?: ReactNode;
@@ -13,6 +14,7 @@ export type SettingItemProps = PropsWithChildren<{
 
 function SettingItem({
   id,
+  icon,
   title,
   description,
   children,
@@ -23,17 +25,32 @@ function SettingItem({
   return (
     <CardHeader
       id={id}
-      className={cn('flex flex-row items-center justify-between gap-x-8', className)}
+      className={cn('flex flex-row items-center justify-between gap-x-8 py-4', className)}
     >
-      <div className='grid gap-1'>
-        <CardTitle className={cn('text-md font-medium', titleClassName)}>{title}</CardTitle>
+      <div className='grid min-w-0 flex-1 gap-1'>
+        <div className='flex items-center gap-2'>
+          {icon && (
+            <span className='flex h-[14px] w-[14px] shrink-0 items-center justify-center [&>svg]:h-[14px] [&>svg]:w-[14px]'>
+              {icon}
+            </span>
+          )}
+          <span className={cn('text-sm font-semibold text-neutral-800 dark:text-neutral-200', titleClassName)}>
+            {title}
+          </span>
+        </div>
         {description && (
-          <CardDescription className={cn('text-sm', descriptionClassName)}>
+          <p
+            className={cn(
+              'text-xs leading-relaxed text-neutral-500 dark:text-neutral-400',
+              icon && 'pl-[22px]',
+              descriptionClassName,
+            )}
+          >
             {description}
-          </CardDescription>
+          </p>
         )}
       </div>
-      <div className='flex items-center justify-end'>
+      <div className='flex shrink-0 items-center justify-end'>
         <div className='flex min-w-[160px] justify-end'>{children}</div>
       </div>
     </CardHeader>

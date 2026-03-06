@@ -1,4 +1,4 @@
-﻿use log::{error, info};
+use log::{error, info};
 use std::process::Command;
 use tauri::ipc::Response;
 use tauri::{command, Manager};
@@ -374,27 +374,25 @@ pub async fn ipc_register_context_menu(enable: bool) -> Result<(), String> {
     let parent_base = "Software\\Classes\\Directory\\shell\\PicSharp";
 
     if enable {
-        // 1. Create parent key with MUIVerb and SubCommands (cascading submenu trigger)
-        reg_set_default(parent_base, "PicSharp")?;
+        // Parent key: MUIVerb + SubCommands="" + Icon
         reg_set_value(parent_base, "MUIVerb", "PicSharp")?;
         reg_set_value(parent_base, "SubCommands", "")?;
+        reg_set_value(parent_base, "Icon", &exe_str)?;
 
-        // 2. Define sub-commands
         let subcommands: Vec<(&str, &str, Option<String>)> = vec![
-            ("01_compress", "直接后台处理压缩", Some(format!("\"{}\" --action compress-silent \"%1\"", exe_str))),
-            ("02_watch",    "直接后台处理监听", Some(format!("\"{}\" --action watch-silent \"%1\"", exe_str))),
-            ("03_sep",      "",                 None),
-            ("04_settings_compress", "设置默认压缩参数", Some(format!("\"{}\" --action settings-compress", exe_str))),
-            ("05_settings_watch",    "设置默认监听参数", Some(format!("\"{}\" --action settings-watch", exe_str))),
+            ("01_compress", "后台压缩", Some(format!("\"{}\" --action compress-silent \"%1\"", exe_str))),
+            ("02_watch", "后台监听", Some(format!("\"{}\" --action watch-silent \"%1\"", exe_str))),
+            ("03_sep", "", None),
+            ("04_settings", "打开设置", Some(format!("\"{}\" --action settings", exe_str))),
         ];
 
         for (sub_name, display, cmd) in &subcommands {
             let sub_base = format!("{}\\shell\\{}", parent_base, sub_name);
             if sub_name == &"03_sep" {
-                // Separator: CommandFlags = 0x40
+                reg_set_value(&sub_base, "MUIVerb", "")?;
                 reg_set_dword(&sub_base, "CommandFlags", "0x40")?;
             } else {
-                reg_set_default(&sub_base, display)?;
+                reg_set_value(&sub_base, "MUIVerb", display)?;
                 if let Some(cmd_value) = cmd {
                     let cmd_key = format!("{}\\command", sub_base);
                     reg_set_default(&cmd_key, cmd_value)?;
@@ -446,6 +444,7 @@ fn reg_set_dword(key: &str, name: &str, data: &str) -> Result<(), String> {
         .map_err(|e| format!("reg set dword failed for {}: {}", key, e))?;
     Ok(())
 }
+
 
 #[cfg(not(target_os = "windows"))]
 #[command]

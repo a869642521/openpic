@@ -133,7 +133,7 @@ function WatchFolderSettingsDialog({ open: isOpen, folder, initialSection, onClo
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && handleCancel()}>
-      <DialogContent className='flex max-h-[90vh] max-w-lg flex-col gap-0 p-0'>
+      <DialogContent className='flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-visible p-0 shadow-2xl'>
         {/* 固定标题栏 */}
         <DialogHeader className='shrink-0 border-b border-neutral-200 px-6 py-4 pr-14 dark:border-neutral-800'>
           <DialogTitle className='flex items-center gap-2 text-sm'>
@@ -159,7 +159,7 @@ function WatchFolderSettingsDialog({ open: isOpen, folder, initialSection, onClo
                   type='button'
                   onClick={() => handleFeatureToggle(feature)}
                   className={cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-full border py-1.5 text-xs font-medium transition-colors',
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-full border py-1.5 text-xs font-medium transition-colors shadow-none',
                     active
                       ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300'
                       : 'border-neutral-200 bg-neutral-100 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500',

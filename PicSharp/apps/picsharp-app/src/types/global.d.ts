@@ -1,5 +1,5 @@
 import type { ICompressor } from '../utils/compressor';
-import type { CompressionOutputMode, ConvertFormat, ResizeFit, ResizeMode, WatermarkType } from '../constants';
+import type { CompressionMode, CompressionOutputMode, CompressionType, ConvertFormat, ResizeFit, ResizeMode, WatermarkType } from '../constants';
 import type { TinypngMetadata } from '../constants';
 
 declare global {
@@ -40,6 +40,15 @@ declare global {
     watermarkImagePath: string;
     watermarkImageOpacity: number;
     watermarkImageScale: number;
+    // 每个文件夹独立的基础压缩设置（新增，可选以兼容旧数据）
+    compressionMode?: CompressionMode;
+    compressionLevel?: number;
+    compressionType?: CompressionType;
+    compressionOutput?: CompressionOutputMode;
+    saveAsFileSuffix?: string;
+    saveToFolder?: string;
+    thresholdEnable?: boolean;
+    thresholdValue?: number;
   }
 
   interface WatchFolder {

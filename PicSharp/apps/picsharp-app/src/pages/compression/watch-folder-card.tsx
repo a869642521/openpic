@@ -20,8 +20,8 @@ function WatchFolderCard() {
   const t = useI18n();
   const navigate = useNavigate();
   const { progressRef } = useContext(CompressionContext);
-  const { watchingFolder, watchFolderStats, working, resetWatchOnly } = useCompressionStore(
-    useSelector(['watchingFolder', 'watchFolderStats', 'working', 'resetWatchOnly']),
+  const { watchFolders, working, resetWatchOnly } = useCompressionStore(
+    useSelector(['watchFolders', 'working', 'resetWatchOnly']),
   );
   const {
     [SettingsKey.CompressionWatchSizeFilterEnable]: sizeFilterEnable,
@@ -34,6 +34,11 @@ function WatchFolderCard() {
       'set',
     ]),
   );
+
+  // 兼容旧版单文件夹视图：取第一个监听文件夹
+  const activeFolder = watchFolders[0] ?? null;
+  const watchingFolder = activeFolder?.path ?? null;
+  const watchFolderStats = (activeFolder?.stats as any) ?? null;
 
   const [filterInput, setFilterInput] = useState(() => String(sizeFilterValue));
 

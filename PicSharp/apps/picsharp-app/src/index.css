@@ -17,10 +17,18 @@ body,
   background: transparent;
   /* user-select:text; */
 }
+/* 弹窗打开时允许 body 溢出，避免裁切弹窗阴影 */
+body:has([data-dialog-portal]) {
+  overflow: visible;
+}
 
+/* 仅移除 outline，保留 box-shadow，避免 focus 时阴影变化影响所有带阴影组件 */
 :focus {
   outline: none !important;
-  box-shadow: none !important;
+}
+
+:focus-visible {
+  outline: none !important;
 }
 
 
@@ -157,6 +165,19 @@ body,
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background-color: rgb(115 115 115 / 0.9);
+}
+
+/* 弹窗样式隔离：弹窗与主页使用独立上下文，避免互相影响 */
+[data-dialog-portal] {
+  isolation: isolate;
+}
+
+/* 设置页 Card 分隔线（仅影响设置页，不影响首页） */
+.settings-page .rounded-xl > *:not(:last-child) {
+  border-bottom: 1px solid rgb(243 244 246);
+}
+.dark .settings-page .rounded-xl > *:not(:last-child) {
+  border-bottom-color: rgb(38 38 38);
 }
 
 .breathe-highlight {

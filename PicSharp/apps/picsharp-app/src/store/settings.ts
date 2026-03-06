@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { load } from '@tauri-apps/plugin-store';
 import {
   SETTINGS_FILE_NAME,
@@ -68,16 +68,12 @@ interface SettingsState {
   }>;
   [SettingsKey.TinypngPreserveMetadata]: TinypngMetadata[];
   [SettingsKey.ContextMenuIntegration]: boolean;
-  [SettingsKey.ContextMenuCompressDefaults]: string;
-  [SettingsKey.ContextMenuWatchDefaults]: string;
-  contextMenuSettingsOpen: 'compress' | 'watch' | null;
 }
 
 interface SettingsAction {
   init: (reload?: boolean) => Promise<void>;
   set: (key: SettingsKey, value: any) => Promise<void>;
   reset: () => Promise<void>;
-  setContextMenuSettingsOpen: (tab: 'compress' | 'watch' | null) => void;
 }
 
 type SettingsStore = SettingsState & SettingsAction;
@@ -93,7 +89,7 @@ const useSettingsStore = create(
       [SettingsKey.AutoCheckUpdate]: true,
       [SettingsKey.PrivacyMode]: false,
       [SettingsKey.CompressionMode]: CompressionMode.Local,
-      [SettingsKey.CompressionType]: CompressionType.Lossy,
+      [SettingsKey.CompressionType]: CompressionType.Lossless,
       [SettingsKey.CompressionLevel]: 3,
       [SettingsKey.CompressionKeepMetadata]: [],
       [SettingsKey.Concurrency]: 6,
@@ -125,17 +121,11 @@ const useSettingsStore = create(
       [SettingsKey.CompressionWatchSizeFilterValue]: 500,
       [SettingsKey.TinypngApiKeys]: [],
       [SettingsKey.ContextMenuIntegration]: false,
-      [SettingsKey.ContextMenuCompressDefaults]: '',
-      [SettingsKey.ContextMenuWatchDefaults]: '',
-      contextMenuSettingsOpen: null,
       [SettingsKey.TinypngPreserveMetadata]: [
         TinypngMetadata.Copyright,
         TinypngMetadata.Creator,
         TinypngMetadata.Location,
       ],
-      setContextMenuSettingsOpen: (tab) => {
-        set({ contextMenuSettingsOpen: tab });
-      },
       init: async (reload = false) => {
         const appDataDirPath = await appDataDir();
         const settingsFilePath = await join(appDataDirPath, SETTINGS_FILE_NAME);

@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router';
 import { Separator } from '@/components/ui/separator';
 import { SidebarNav } from './sidebar-nav';
-import { Settings2, FileArchive, Panda, Info, FolderSync, RefreshCw } from 'lucide-react';
+import { Settings2, Panda, Info, MousePointerClick } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import useSettingsStore from '@/store/settings';
@@ -31,9 +31,9 @@ export default function SettingsLayout() {
       icon: <Settings2 />,
     },
     {
-      title: t('settings.compression.title'),
-      href: '/settings/compression',
-      icon: <FileArchive />,
+      title: t('settings.context_menu.nav_title'),
+      href: '/settings/context-menu',
+      icon: <MousePointerClick />,
     },
     {
       title: t('settings.tinypng.title'),
@@ -77,40 +77,23 @@ export default function SettingsLayout() {
   };
 
   return (
-    <div className='flex h-full flex-col'>
+    <div
+      className='settings-page flex h-full flex-col'
+      style={{ backgroundColor: 'rgb(245, 246, 247)' }}
+    >
       <div
         className={'flex h-[48px] items-center justify-end gap-1 px-2'}
         data-tauri-drag-region='true'
         onClick={handleOpenSettingDir}
       >
-        <div className='flex items-center gap-1'>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant='ghost' size='icon' onClick={handleReload}>
-                <RefreshCw className='h-5 w-5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('settings.reload')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant='ghost' size='icon' onClick={handleReset}>
-                <FolderSync className='h-5 w-5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('settings.reset_all')}</TooltipContent>
-          </Tooltip>
-        </div>
-        <Separator orientation='vertical' className='h-4 bg-neutral-200 dark:bg-neutral-700' />
-        <WindowControl showControls={!isMac} showFullscreen={!isMac} />
+        <WindowControl showControls={!isMac} showFullscreen={false} showAlwaysOnTop={false} />
       </div>
-      {/* <Separator className='mb-4' /> */}
-      <div className='flex flex-1 flex-col space-y-4 overflow-auto lg:flex-row lg:space-y-0'>
-        <aside className='px-4 lg:w-1/6'>
+      <div className='flex flex-1 flex-col gap-3 overflow-auto lg:flex-row'>
+        <aside className='shrink-0 lg:w-52' style={{ padding: '0 20px' }}>
           <SidebarNav items={sidebarNavItems} />
         </aside>
-        <ScrollArea className='mx-0 w-full flex-1'>
-          <div className='px-4 pb-6'>
+        <ScrollArea className='min-w-0 flex-1'>
+          <div className='px-5 pb-8 pt-1'>
             <Outlet />
           </div>
         </ScrollArea>

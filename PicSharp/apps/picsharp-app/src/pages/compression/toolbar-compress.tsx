@@ -36,67 +36,38 @@ function ToolbarCompress() {
       ]),
     );
   const { setCurrentBatchTimestamp } = useCompressionStore.getState();
-  const {
-    [SettingsKey.TinypngApiKeys]: tinypngApiKeys,
-    [SettingsKey.CompressionMode]: compressionMode,
-    [SettingsKey.CompressionOutput]: outputMode,
-    [SettingsKey.CompressionOutputSaveToFolder]: saveToFolder,
-    [SettingsKey.CompressionOutputSaveAsFileSuffix]: saveAsFileSuffix,
-    [SettingsKey.CompressionThresholdEnable]: thresholdEnable,
-    [SettingsKey.CompressionThresholdValue]: thresholdValue,
-    [SettingsKey.CompressionSizeFilterEnable]: sizeFilterEnable,
-    [SettingsKey.CompressionSizeFilterValue]: sizeFilterValue,
-    [SettingsKey.CompressionConvertEnable]: convertEnable,
-    [SettingsKey.CompressionType]: compressionType,
-    [SettingsKey.CompressionLevel]: compressionLevel,
-    [SettingsKey.CompressionConvert]: convertTypes,
-    [SettingsKey.CompressionConvertAlpha]: convertAlpha,
-    [SettingsKey.CompressionResizeDimensions]: resizeDimensions,
-    [SettingsKey.CompressionResizeEnable]: resizeEnable,
-    [SettingsKey.CompressionResizeMode]: resizeMode,
-    [SettingsKey.CompressionResizeScale]: resizeScale,
-    [SettingsKey.CompressionResizeFit]: resizeFit,
-    [SettingsKey.CompressionWatermarkType]: watermarkType,
-    [SettingsKey.CompressionWatermarkPosition]: watermarkPosition,
-    [SettingsKey.CompressionWatermarkText]: watermarkText,
-    [SettingsKey.CompressionWatermarkTextColor]: watermarkTextColor,
-    [SettingsKey.CompressionWatermarkFontSize]: watermarkFontSize,
-    [SettingsKey.CompressionWatermarkImagePath]: watermarkImagePath,
-    [SettingsKey.CompressionWatermarkImageOpacity]: watermarkImageOpacity,
-    [SettingsKey.CompressionWatermarkImageScale]: watermarkImageScale,
-    [SettingsKey.CompressionKeepMetadata]: preserveMetadata,
-  } = useSettingsStore(
-    useSelector([
-      SettingsKey.TinypngApiKeys,
-      SettingsKey.CompressionMode,
-      SettingsKey.CompressionOutput,
-      SettingsKey.CompressionOutputSaveToFolder,
-      SettingsKey.CompressionOutputSaveAsFileSuffix,
-      SettingsKey.CompressionThresholdEnable,
-      SettingsKey.CompressionThresholdValue,
-      SettingsKey.CompressionSizeFilterEnable,
-      SettingsKey.CompressionSizeFilterValue,
-      SettingsKey.CompressionConvertEnable,
-      SettingsKey.CompressionType,
-      SettingsKey.CompressionLevel,
-      SettingsKey.CompressionConvert,
-      SettingsKey.CompressionConvertAlpha,
-      SettingsKey.CompressionResizeDimensions,
-      SettingsKey.CompressionResizeEnable,
-      SettingsKey.CompressionResizeMode,
-      SettingsKey.CompressionResizeScale,
-      SettingsKey.CompressionResizeFit,
-      SettingsKey.CompressionWatermarkType,
-      SettingsKey.CompressionWatermarkPosition,
-      SettingsKey.CompressionWatermarkText,
-      SettingsKey.CompressionWatermarkTextColor,
-      SettingsKey.CompressionWatermarkFontSize,
-      SettingsKey.CompressionWatermarkImagePath,
-      SettingsKey.CompressionWatermarkImageOpacity,
-      SettingsKey.CompressionWatermarkImageScale,
-      SettingsKey.CompressionKeepMetadata,
-    ]),
+  const { [SettingsKey.TinypngApiKeys]: tinypngApiKeys } = useSettingsStore(
+    useSelector([SettingsKey.TinypngApiKeys]),
   );
+  const {
+    compressionMode,
+    outputMode,
+    saveToFolder,
+    saveAsFileSuffix,
+    thresholdEnable,
+    thresholdValue,
+    sizeFilterEnable,
+    sizeFilterValue,
+    convertEnable,
+    compressionType,
+    compressionLevel,
+    convertTypes,
+    convertAlpha,
+    resizeDimensions,
+    resizeEnable,
+    resizeMode,
+    resizeScale,
+    resizeFit,
+    watermarkType,
+    watermarkPosition,
+    watermarkText,
+    watermarkTextColor,
+    watermarkFontSize,
+    watermarkImagePath,
+    watermarkImageOpacity,
+    watermarkImageScale,
+    preserveMetadata,
+  } = useCompressionStore((s) => s.classicSettings);
   const t = useI18n();
   const r = useReport();
   const indicatorRef = useRef<HTMLSpanElement>(null);
@@ -147,17 +118,7 @@ function ToolbarCompress() {
 
       if (outputMode === CompressionOutputMode.SaveToNewFolder && !saveToFolder) {
         r('save_to_folder_not_configured');
-        const result = await message.confirm({
-          title: t('tips.save_to_folder_not_configured'),
-          confirmText: t('goToSettings'),
-          cancelText: t('cancel'),
-        });
-        if (result) {
-          openSettingsWindow({
-            subpath: 'compression',
-            hash: 'output',
-          });
-        }
+        messageApi?.error(t('tips.save_to_folder_not_configured'));
         return;
       }
 
@@ -167,19 +128,7 @@ function ToolbarCompress() {
         !(await exists(saveToFolder))
       ) {
         r('save_to_folder_not_exists');
-        const result = await message.confirm({
-          title: t('tips.save_to_folder_not_exists', {
-            path: saveToFolder,
-          }),
-          confirmText: t('goToSettings'),
-          cancelText: t('cancel'),
-        });
-        if (result) {
-          openSettingsWindow({
-            subpath: 'compression',
-            hash: 'output',
-          });
-        }
+        messageApi?.error(t('tips.save_to_folder_not_exists', { path: saveToFolder }));
         return;
       }
 

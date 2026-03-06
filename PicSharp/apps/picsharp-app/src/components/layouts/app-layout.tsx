@@ -8,9 +8,9 @@ import { parseOpenWithFiles } from '@/utils/launch';
 import useAppStore from '@/store/app';
 import useCompressionStore from '@/store/compression';
 import useSettingsStore from '@/store/settings';
-import { isValidArray, isProd, isLinux, isMac } from '@/utils';
-import { parsePaths } from '@/utils/fs';
-import { VALID_IMAGE_EXTS, SettingsKey } from '@/constants';
+import { isValidArray, isProd, isLinux, isMac, calProgress } from '@/utils';
+import { parsePaths, humanSize } from '@/utils/fs';
+import { VALID_IMAGE_EXTS, SettingsKey, CompressionMode, CompressionOutputMode, WatermarkType } from '@/constants';
 import { useNavigate } from '@/hooks/useNavigate';
 import { spawnWindow } from '@/utils/window';
 import { useI18n } from '@/i18n';
@@ -29,6 +29,9 @@ import { PathTagsInput } from '../path-tags-input';
 import { TooltipProvider } from '../ui/tooltip';
 import { useTrafficLightStore } from '@/store/trafficLight';
 import { useReport } from '@/hooks/useReport';
+import Compressor from '@/utils/compressor';
+import { defaultWatchFolderSettings } from '@/store/compression';
+import { Progress } from 'antd';
 
 if (isProd) {
   window.oncontextmenu = (e) => {
@@ -41,7 +44,7 @@ export default function AppLayout() {
   const progressRef = useRef<PageProgressRef>(null);
   const navigate = useNavigate();
   const t = useI18n();
-  const { messageApi } = useContext(AppContext);
+  const { messageApi, notificationApi } = useContext(AppContext);
   const r = useReport();
 
   useEffect(() => {
@@ -50,8 +53,7 @@ export default function AppLayout() {
     let unlistenNsWatch: UnlistenFn | null = null;
     let unlistenNsCompressSilent: UnlistenFn | null = null;
     let unlistenNsWatchSilent: UnlistenFn | null = null;
-    let unlistenNsSettingsCompress: UnlistenFn | null = null;
-    let unlistenNsSettingsWatch: UnlistenFn | null = null;
+    let unlistenNsSettings: UnlistenFn | null = null;
     let unlistenDeepLink: UnlistenFn | null = null;
 
     async function process(mode: string, paths: string[]) {
@@ -61,7 +63,6 @@ export default function AppLayout() {
           setWorking,
           setClassicFiles,
           setWatchFiles,
-          setWatchingFolder,
           setMode,
           reset,
           setPendingWatchPath,
@@ -83,7 +84,7 @@ export default function AppLayout() {
           await updateWatchHistory(paths[0]);
           setMode('watch');
           setWatchFiles([]);
-          setWatchingFolder(paths[0]);
+          setPendingWatchPath(paths[0]);
           setWorking(true);
           navigate('/compression/watch/workspace');
         }
@@ -95,64 +96,107 @@ export default function AppLayout() {
 
     async function handleSilentCompress(paths: string[]) {
       const currentWindow = WebviewWindow.getCurrent();
-      await currentWindow.hide();
-      const settingsState = useSettingsStore.getState();
-      let defaultsJson = settingsState['context_menu_compress_defaults' as any] as string;
-      let defaults: any = {};
-      if (defaultsJson) {
-        try { defaults = JSON.parse(defaultsJson); } catch {}
-      }
+      await currentWindow.minimize();
+
+      const s = useSettingsStore.getState();
+      const appState = useAppStore.getState();
+
       try {
-        const fileInfos = await parsePaths(paths, ['png','jpg','jpeg','webp','gif','svg','tiff','tif','avif']);
+        const fileInfos = await parsePaths(paths, VALID_IMAGE_EXTS);
         if (fileInfos.length === 0) {
-          sendTextNotification('PicSharp', '\u672a\u627e\u5230\u53ef\u538b\u7f29\u7684\u56fe\u7247\u6587\u4ef6');
+          sendTextNotification('PicSharp', t('bg_compress.no_images'));
           return;
         }
-        const appState = useAppStore.getState();
-        const CompressorClass = await import('@/utils/compressor').then(m => m.default);
-        const { CompressionMode, CompressionOutputMode } = await import('@/constants');
-        const compressor = new CompressorClass({
-          concurrency: settingsState['concurrency'] ?? 6,
-          compressionMode: defaults.compressionMode ?? settingsState['compression_mode'] ?? CompressionMode.Local,
-          compressionLevel: defaults.compressionLevel ?? settingsState['compression_level'] ?? 3,
-          compressionType: defaults.compressionType ?? settingsState['compression_type'],
+
+        const total = fileInfos.length;
+        let fulfilled = 0;
+        let rejected = 0;
+        let totalSaved = 0;
+
+        const BG_KEY = 'bg-compress-progress';
+        const updateNotification = (pct: number, done?: boolean) => {
+          notificationApi?.open({
+            key: BG_KEY,
+            message: done ? t('bg_compress.completed_title') : t('bg_compress.progress_title'),
+            description: done ? (
+              <div className='text-xs text-neutral-500'>
+                {t('bg_compress.completed_desc', { fulfilled, rejected, total, saved: humanSize(totalSaved) })}
+              </div>
+            ) : (
+              <div className='flex flex-col gap-1.5'>
+                <Progress percent={pct} size='small' strokeColor='#3b82f6' />
+                <span className='text-xs text-neutral-500'>{fulfilled + rejected} / {total}</span>
+              </div>
+            ),
+            placement: 'bottomRight',
+            duration: done ? 5 : 0,
+          });
+        };
+
+        updateNotification(0);
+
+        await new Compressor({
+          concurrency: s[SettingsKey.Concurrency] ?? 6,
+          compressionMode: s[SettingsKey.CompressionMode] ?? CompressionMode.Local,
+          compressionLevel: s[SettingsKey.CompressionLevel] ?? 3,
+          compressionType: s[SettingsKey.CompressionType],
+          limitCompressRate: undefined,
+          tinifyApiKeys: (s[SettingsKey.TinypngApiKeys] ?? []).map((k) => k.api_key),
           save: {
-            mode: defaults.outputMode ?? settingsState['compression_output'] ?? CompressionOutputMode.Overwrite,
-            newFileSuffix: settingsState['compression_output_save_as_file_suffix'] ?? '_min',
-            newFolderPath: settingsState['compression_output_save_to_folder'] ?? '',
+            mode: CompressionOutputMode.Overwrite,
+            newFileSuffix: '_min',
+            newFolderPath: '',
           },
           tempDir: appState.imageTempDir,
           sidecarDomain: appState.sidecar?.origin,
-          tinifyApiKeys: (settingsState['tinypng_api_keys'] as any[])?.map((k: any) => k.api_key) ?? [],
-        });
-        let succeeded = 0;
-        let totalSaved = 0;
-        const results = await compressor.compress(
+          convertEnable: false,
+          convertTypes: [],
+          convertAlpha: '#FFFFFF',
+          resizeEnable: false,
+          resizeDimensions: [0, 0],
+          resizeScale: 0,
+          resizeFit: s[SettingsKey.CompressionResizeFit],
+          watermarkType: WatermarkType.None,
+          watermarkPosition: s[SettingsKey.CompressionWatermarkPosition],
+          watermarkText: '',
+          watermarkTextColor: '#FFFFFF',
+          watermarkFontSize: 72,
+          watermarkImagePath: '',
+          watermarkImageOpacity: 1,
+          watermarkImageScale: 0.15,
+          preserveMetadata: [],
+        }).compress(
           fileInfos,
-          (res: any) => {
-            succeeded++;
+          (res) => {
+            fulfilled++;
             totalSaved += Math.max(0, (res.input_size ?? 0) - (res.output_size ?? 0));
+            updateNotification(calProgress(fulfilled + rejected, total));
+          },
+          () => {
+            rejected++;
+            updateNotification(calProgress(fulfilled + rejected, total));
           },
         );
-        const savedKB = (totalSaved / 1024).toFixed(1);
-        sendTextNotification('PicSharp', '\u5df2\u538b\u7f29 ' + succeeded + ' \u5f20\u56fe\u7247\uff0c\u8282\u7701 ' + savedKB + ' KB');
-      } catch(e) {
+
+        updateNotification(100, true);
+        sendTextNotification(
+          'PicSharp',
+          t('bg_compress.completed_desc', { fulfilled, rejected, total, saved: humanSize(totalSaved) }),
+        );
+      } catch (e) {
         console.error('[silent compress]', e);
-        sendTextNotification('PicSharp', '\u538b\u7f29\u5931\u8d25\uff0c\u8bf7\u67e5\u770b\u65e5\u5fd7');
+        notificationApi?.destroy('bg-compress-progress');
+        sendTextNotification('PicSharp', t('bg_compress.failed'));
       }
     }
 
     async function handleSilentWatch(path: string) {
       const currentWindow = WebviewWindow.getCurrent();
+      await currentWindow.minimize();
+
       const { addWatchFolder } = useCompressionStore.getState();
-      const settingsState = useSettingsStore.getState();
-      let defaultsJson = settingsState['context_menu_watch_defaults' as any] as string;
-      let defaults: any = {};
-      if (defaultsJson) {
-        try { defaults = JSON.parse(defaultsJson); } catch {}
-      }
-      const { defaultWatchFolderSettings } = await import('@/store/compression');
-      const folderSettings = { ...defaultWatchFolderSettings, ...defaults };
+      const folderSettings = { ...defaultWatchFolderSettings };
+
       addWatchFolder({
         id: path,
         path,
@@ -161,9 +205,20 @@ export default function AppLayout() {
         settings: folderSettings,
         stats: null,
       });
+
       const folderName = path.split(/[\/\\]/).pop() || path;
-      sendTextNotification('PicSharp', '\u5df2\u5f00\u59cb\u76d1\u542c ' + folderName);
-      await currentWindow.hide();
+      notificationApi?.open({
+        key: 'bg-watch-started',
+        message: t('bg_watch.started_title'),
+        description: (
+          <span className='text-xs text-neutral-500'>
+            {t('bg_watch.started_desc', { folder: folderName })}
+          </span>
+        ),
+        placement: 'bottomRight',
+        duration: 5,
+      });
+      sendTextNotification('PicSharp', t('bg_watch.started_desc', { folder: folderName }));
     }
 
     async function handleOpenWithFiles() {
@@ -186,17 +241,10 @@ export default function AppLayout() {
           case 'watch-silent':
             if (payload.paths[0]) handleSilentWatch(payload.paths[0]);
             break;
-          case 'settings-compress':
+          case 'settings':
             await WebviewWindow.getCurrent().show();
             await WebviewWindow.getCurrent().setFocus();
-            useSettingsStore.getState().setContextMenuSettingsOpen('compress');
-            navigate('/settings/general');
-            break;
-          case 'settings-watch':
-            await WebviewWindow.getCurrent().show();
-            await WebviewWindow.getCurrent().setFocus();
-            useSettingsStore.getState().setContextMenuSettingsOpen('watch');
-            navigate('/settings/general');
+            navigate('/settings/context-menu');
             break;
           default:
             process(payload.mode, payload.paths);
@@ -292,19 +340,11 @@ export default function AppLayout() {
         const path = event.payload as string;
         handleSilentWatch(path);
       });
-      unlistenNsSettingsCompress = await currentWindow.listen('ns_settings_compress', async () => {
+      unlistenNsSettings = await currentWindow.listen('ns_settings', async () => {
         if (currentWindow.label !== 'main') return;
         await currentWindow.show();
         await currentWindow.setFocus();
-        useSettingsStore.getState().setContextMenuSettingsOpen('compress');
-        navigate('/settings/general');
-      });
-      unlistenNsSettingsWatch = await currentWindow.listen('ns_settings_watch', async () => {
-        if (currentWindow.label !== 'main') return;
-        await currentWindow.show();
-        await currentWindow.setFocus();
-        useSettingsStore.getState().setContextMenuSettingsOpen('watch');
-        navigate('/settings/general');
+        navigate('/settings/context-menu');
       });
       emit('ready', currentWindow.label);
     }
@@ -374,8 +414,7 @@ export default function AppLayout() {
       isFunction(unlistenNsWatch) && unlistenNsWatch();
       isFunction(unlistenNsCompressSilent) && unlistenNsCompressSilent();
       isFunction(unlistenNsWatchSilent) && unlistenNsWatchSilent();
-      isFunction(unlistenNsSettingsCompress) && unlistenNsSettingsCompress();
-      isFunction(unlistenNsSettingsWatch) && unlistenNsSettingsWatch();
+      isFunction(unlistenNsSettings) && unlistenNsSettings();
       isFunction(unlistenDeepLink) && unlistenDeepLink();
     };
   }, []);
@@ -407,13 +446,19 @@ export default function AppLayout() {
 
   return (
     <ErrorBoundary>
-      <div className='relative flex h-screen w-screen bg-background'>
+      <div
+        className='relative flex h-screen w-screen'
+        style={{ backgroundColor: 'rgb(236, 237, 238)' }}
+      >
         <PageProgress ref={progressRef} description={t('tips.import_files')} />
         {WebviewWindow.getCurrent().label === 'main' && <SidebarNav />}
         <div className='flex min-w-0 flex-1 flex-col overflow-hidden bg-background'>
           <Header />
           <div
-            className='min-h-0 flex-1 overflow-hidden p-3 pl-0'
+            className={cn(
+              'min-h-0 flex-1 overflow-hidden',
+              location.pathname.startsWith('/settings') ? 'p-0' : 'p-3 pl-0',
+            )}
             style={{ backgroundColor: 'rgb(236, 237, 238)' }}
           >
             <main

@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   // Common
   'common.no_image_to_compress': '未识别到可压缩的图片',
   'common.drag_and_drop': '鼠标松开进行压缩',
@@ -52,21 +52,42 @@
   // General.Autostart
   'settings.general.autostart.title': '开机自动启动',
   'settings.general.autostart.description': '开机后自动启动应用',
-  'settings.general.context_menu.title': '右键菜单集成',
-  'settings.general.context_menu.defaults_dialog.title': '右键菜单默认参数设置',
-  'settings.general.context_menu.defaults_dialog.tab_compress': '压缩默认参数',
-  'settings.general.context_menu.defaults_dialog.tab_watch': '监听默认参数',
-  'settings.general.context_menu.defaults_dialog.compress_section': '压缩方式',
-  'settings.general.context_menu.defaults_dialog.output_section': '输出方式',
-  'settings.general.context_menu.description': '在文件夹右键菜单中添加「用 PicSharp 压缩」和「用 PicSharp 监听」选项（仅 Windows）',
+  // Settings.ContextMenu (dedicated tab)
+  'settings.context_menu.nav_title': '快捷操作',
+  'settings.context_menu.title': '右键菜单集成',
+  'settings.context_menu.description': '在文件夹右键菜单中添加 PicSharp 快捷操作（仅 Windows）',
+  'settings.context_menu.not_supported': '右键菜单集成仅支持 Windows 平台',
+  'settings.context_menu.features_title': '菜单功能',
+  'settings.context_menu.features_desc': '启用后，右键点击文件夹将出现以下快捷操作：',
+  'settings.context_menu.feature_compress_title': '后台压缩',
+  'settings.context_menu.feature_compress_desc': '使用当前压缩设置，在后台自动压缩文件夹内的所有图片，右下角弹窗显示实时进度',
+  'settings.context_menu.feature_watch_title': '后台监听',
+  'settings.context_menu.feature_watch_desc': '将文件夹添加到监听列表，自动处理新增和变更的图片文件',
+  'settings.context_menu.feature_settings_title': '打开设置',
+  'settings.context_menu.feature_settings_desc': '快速打开 PicSharp 设置页面，调整压缩参数',
+  'settings.context_menu.compression_settings_title': '压缩参数',
+  'settings.context_menu.compression_settings_desc': '以下设置仅作用于右键菜单的「后台压缩」功能',
+  'settings.context_menu.settings_info_title': '参数说明',
+  'settings.context_menu.settings_info_desc': '如需配置 TinyPNG API 密钥，请点击下方链接',
+  'settings.context_menu.go_compression': '压缩设置',
+  'settings.context_menu.go_tinypng': 'TinyPNG 设置',
+  // Background compress/watch notifications
+  'bg_compress.no_images': '未找到可压缩的图片文件',
+  'bg_compress.progress_title': '后台压缩中...',
+  'bg_compress.completed_title': '压缩完成',
+  'bg_compress.completed_desc': '已压缩 {fulfilled} 张，失败 {rejected} 张，共 {total} 张，节省 {saved}',
+  'bg_compress.failed': '压缩失败，请查看日志',
+  'bg_watch.started_title': '已开始监听',
+  'bg_watch.started_desc': '已开始监听文件夹：{folder}',
   // Settings.General.Update
   'settings.general.update.title': '自动检查更新',
   'settings.general.update.description': '当有新版本可用时,自动检查更新并通知',
   // Settings.General.Privacy
   'settings.general.privacy.title': '隐私模式',
   'settings.general.privacy.description': '当隐私模式启用时，应用不会收集任何数据',
-  // Settings.Compression
-  'settings.compression.title': '压缩设置',
+  // Settings.Compression (快捷操作专用)
+  'settings.compression.title': '快捷操作压缩',
+  'settings.compression.context_menu_hint': '以下设置仅作用于右键菜单的「后台压缩」功能，批量压缩和监听模式各自拥有独立设置。',
   // Settings.Compression.Concurrency
   'settings.compression.concurrency.title': '并发任务数',
   'settings.compression.concurrency.description': '并发压缩任务数',
@@ -124,6 +145,7 @@
   'compression.options.save_mode.overwrite': '覆盖',
   'compression.options.save_mode.specify': '指定',
   'compression.options.save_mode.overwrite_hint': '压缩完成后会将原图片进行覆盖',
+  'compression.options.save_mode.specify_empty_hint': '请选择文件夹',
   'compression.options.size_filter.all_skipped': '所有图片均小于过滤阈值，已跳过 {{count}} 张',
   'compression.options.common_hints.title': '我常用的压缩大小',
   'compression.options.common_hints.placeholder': '输入压缩要求，如 500KB、80% 等',

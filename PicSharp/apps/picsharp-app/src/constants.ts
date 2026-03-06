@@ -1,4 +1,4 @@
-﻿export const SETTINGS_FILE_NAME = 'settings.json';
+export const SETTINGS_FILE_NAME = 'settings.json';
 
 export const DEFAULT_SETTINGS_FILE_NAME = 'settings.default.json';
 
@@ -57,8 +57,6 @@ export enum SettingsKey {
   TinypngApiKeys = 'tinypng_api_keys',
   TinypngPreserveMetadata = 'tinypng_preserve_metadata',
   ContextMenuIntegration = 'context_menu_integration',
-  ContextMenuCompressDefaults = 'context_menu_compress_defaults',
-  ContextMenuWatchDefaults = 'context_menu_watch_defaults',
 }
 
 export enum CompressionMode {

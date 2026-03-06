@@ -21,9 +21,9 @@ import ClassicRedirect from './pages/compression/classic-redirect';
 import WatchRedirect from './pages/compression/watch-redirect';
 import Settings from './pages/settings';
 import SettingsGeneral from './pages/settings/general';
-import SettingsCompression from './pages/settings/compression';
 import SettingsTinypng from './pages/settings/tinypng';
 import SettingsAbout from './pages/settings/about';
+import SettingsContextMenu from './pages/settings/context-menu';
 import ImageCompare from './pages/image-compare';
 import Update from './pages/update';
 import { Toaster } from 'sonner';
@@ -95,8 +95,8 @@ export default function AppRoutes() {
                 <Route path='settings' element={<Settings />}>
                   <Route index element={<Navigate to='/settings/general' />} />
                   <Route path='general' element={<SettingsGeneral />} />
+                  <Route path='context-menu' element={<SettingsContextMenu />} />
                   <Route path='tinypng' element={<SettingsTinypng />} />
-                  <Route path='compression' element={<SettingsCompression />} />
                   <Route path='about' element={<SettingsAbout />} />
                 </Route>
                 <Route path='image-compare' element={<ImageCompare />} />

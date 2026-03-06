@@ -280,7 +280,7 @@ function WatermarkOptionsCard() {
                   className='h-10 text-xs flex-1'
                   readOnly
                 />
-                <Button size='sm' variant='outline' onClick={handleChooseFolder}>
+                <Button size='sm' variant='outline' style={{ backgroundColor: 'rgb(245, 246, 247)' }} onClick={handleChooseFolder}>
                   {t('settings.compression.output.option.save_to_new_folder.choose')}
                 </Button>
               </div>
