@@ -366,6 +366,245 @@ pub async fn ipc_kill_picsharp_sidecar_processes() -> Result<String, String> {
 }
 
 #[cfg(target_os = "windows")]
+fn try_install_sparse_package(exe_path: &std::path::Path) {
+    use std::fs;
+
+    let exe_dir = exe_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let res_dir = exe_dir.join("resources");
+
+    // 查找 DLL（优先 resources 子目录，其次与 exe 同目录）
+    let dll_src = [
+        res_dir.join("picsharp_shell_command.dll"),
+        exe_dir.join("picsharp_shell_command.dll"),
+    ]
+    .into_iter()
+    .find(|p| p.exists());
+
+    let dll_src = match dll_src {
+        Some(p) => p,
+        None => {
+            info!("[ContextMenu] Sparse Package: picsharp_shell_command.dll not found, skipping Win11 main menu");
+            return;
+        }
+    };
+
+    // 查找 AppxManifest.xml
+    let manifest_src = [
+        res_dir.join("AppxManifest.xml"),
+        exe_dir.join("AppxManifest.xml"),
+    ]
+    .into_iter()
+    .find(|p| p.exists());
+
+    let manifest_src = match manifest_src {
+        Some(p) => p,
+        None => {
+            info!("[ContextMenu] Sparse Package: AppxManifest.xml not found, skipping Win11 main menu");
+            return;
+        }
+    };
+
+    // 查找 StoreLogo（图标）
+    let logo_src = [
+        res_dir.join("Assets").join("StoreLogo.png"),
+        exe_dir.join("Assets").join("StoreLogo.png"),
+        res_dir.join("StoreLogo.png"),
+    ]
+    .into_iter()
+    .find(|p| p.exists());
+
+    // 包注册目录：exe_dir/sparse-pkg（与 PicSharp.exe 同级，manifest 放这里）
+    // Add-AppxPackage -Register 以此目录为 PackageRootFolder
+    // 清单中的 DLL Path("picsharp_shell_command.dll") 相对于此目录解析
+    let pkg_dir = exe_dir.join("sparse-pkg");
+    let pkg_assets_dir = pkg_dir.join("Assets");
+    if let Err(e) = fs::create_dir_all(&pkg_assets_dir) {
+        info!("[ContextMenu] Sparse Package: failed to create pkg dir: {}", e);
+        return;
+    }
+
+    // 复制 manifest
+    if let Err(e) = fs::copy(&manifest_src, pkg_dir.join("AppxManifest.xml")) {
+        info!("[ContextMenu] Sparse Package: failed to copy manifest: {}", e);
+        return;
+    }
+
+    // 复制 DLL（COM SurrogateServer Path 相对于 PackageRootFolder 解析）
+    if let Err(e) = fs::copy(&dll_src, pkg_dir.join("picsharp_shell_command.dll")) {
+        info!("[ContextMenu] Sparse Package: failed to copy DLL to pkg dir: {}", e);
+        return;
+    }
+
+    // 复制 Logo（清单中 Properties/Logo 和 VisualElements 图标）
+    if let Some(logo) = logo_src {
+        let _ = fs::copy(&logo, pkg_assets_dir.join("StoreLogo.png"));
+    } else {
+        // Logo 缺失时用透明占位图（1x1 最小 PNG）
+        let minimal_png: &[u8] = &[
+            0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a, // PNG signature
+            0x00,0x00,0x00,0x0d,0x49,0x48,0x44,0x52, // IHDR chunk length + type
+            0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01, // 1x1 pixels
+            0x08,0x02,0x00,0x00,0x00,0x90,0x77,0x53, // bit depth, color type, etc.
+            0xde,0x00,0x00,0x00,0x0c,0x49,0x44,0x41, // IDAT chunk
+            0x54,0x08,0xd7,0x63,0xf8,0xcf,0xc0,0x00, // compressed data
+            0x00,0x00,0x02,0x00,0x01,0xe2,0x21,0xbc, // more compressed
+            0x33,0x00,0x00,0x00,0x00,0x49,0x45,0x4e, // IEND chunk
+            0x44,0xae,0x42,0x60,0x82,                // IEND data
+        ];
+        let _ = fs::write(pkg_assets_dir.join("StoreLogo.png"), minimal_png);
+    }
+
+    // 先卸载旧版本（忽略错误）
+    let _ = Command::new("powershell")
+        .args([
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+            "Get-AppxPackage -Name 'PicSharp.ContextMenu' -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue",
+        ])
+        .output();
+
+    // 确保开发者模式已开启（-Register 不需要签名，但需要 AllowDevelopmentWithoutDevLicense）
+    // 注：修改 HKLM 需要管理员权限；若权限不足此步会静默失败，但若已开启则无需
+    let _ = Command::new("reg")
+        .args([
+            "add",
+            "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock",
+            "/v", "AllowDevelopmentWithoutDevLicense",
+            "/t", "REG_DWORD",
+            "/d", "1",
+            "/f",
+        ])
+        .output();
+
+    // 用 -Register 方式安装（开发者模式，无需签名）
+    let manifest_in_pkg = pkg_dir.join("AppxManifest.xml");
+    let ps_cmd = format!(
+        "Add-AppxPackage -Register -Path '{}'",
+        manifest_in_pkg.to_string_lossy().replace('\'', "''"),
+    );
+    let add_out = Command::new("powershell")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &ps_cmd])
+        .output();
+
+    match add_out {
+        Ok(o) if o.status.success() => {
+            info!("[ContextMenu] Sparse Package installed (dev-register) → Win11 main level context menu enabled");
+        }
+        Ok(o) => {
+            info!(
+                "[ContextMenu] Add-AppxPackage -Register failed\nstdout: {}\nstderr: {}",
+                String::from_utf8_lossy(&o.stdout),
+                String::from_utf8_lossy(&o.stderr)
+            );
+            // 回退：尝试 makeappx + -ExternalLocation（需要 SDK 和签名）
+            try_install_sparse_package_signed(exe_path, &pkg_dir, &dll_src, &manifest_src);
+        }
+        Err(e) => {
+            info!("[ContextMenu] Add-AppxPackage exec error: {}", e);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn try_install_sparse_package_signed(
+    exe_path: &std::path::Path,
+    pkg_dir: &std::path::Path,
+    _dll_src: &std::path::Path,
+    _manifest_src: &std::path::Path,
+) {
+    use std::fs;
+
+    let exe_dir = exe_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+
+    let makeappx = match find_makeappx() {
+        Some(p) => p,
+        None => {
+            info!("[ContextMenu] makeappx.exe not found, cannot use signed fallback");
+            return;
+        }
+    };
+
+    let msix_path = std::env::temp_dir().join("PicSharp.ContextMenu.msix");
+
+    let out = Command::new(&makeappx)
+        .args(["pack", "/nv", "/o", "/d", pkg_dir.to_str().unwrap(), "/p", msix_path.to_str().unwrap()])
+        .output();
+
+    match out {
+        Ok(o) if o.status.success() => {
+            info!("[ContextMenu] makeappx succeeded (signed fallback)");
+        }
+        Ok(o) => {
+            info!("[ContextMenu] makeappx failed: {}", String::from_utf8_lossy(&o.stderr));
+            return;
+        }
+        Err(e) => {
+            info!("[ContextMenu] makeappx exec error: {}", e);
+            return;
+        }
+    }
+
+    let ps_cmd = format!(
+        "Add-AppxPackage -ExternalLocation '{}' -Path '{}'",
+        exe_dir.to_string_lossy().replace('\'', "''"),
+        msix_path.to_string_lossy().replace('\'', "''"),
+    );
+    let add_out = Command::new("powershell")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &ps_cmd])
+        .output();
+
+    match add_out {
+        Ok(o) if o.status.success() => {
+            info!("[ContextMenu] Sparse Package installed (signed) → Win11 main level context menu enabled");
+        }
+        Ok(o) => {
+            info!(
+                "[ContextMenu] Add-AppxPackage -ExternalLocation failed\nstdout: {}\nstderr: {}",
+                String::from_utf8_lossy(&o.stdout),
+                String::from_utf8_lossy(&o.stderr)
+            );
+        }
+        Err(e) => {
+            info!("[ContextMenu] Add-AppxPackage -ExternalLocation exec error: {}", e);
+        }
+    }
+    let _ = fs::remove_file(&msix_path);
+}
+
+#[cfg(target_os = "windows")]
+fn try_uninstall_sparse_package() {
+    let out = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "Get-AppxPackage -Name 'PicSharp.ContextMenu' -ErrorAction SilentlyContinue | Remove-AppxPackage",
+        ])
+        .output();
+    if let Ok(o) = out {
+        if o.status.success() {
+            info!("[ContextMenu] Sparse Package uninstalled");
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn find_makeappx() -> Option<std::path::PathBuf> {
+    let kits = std::path::Path::new("C:\\Program Files (x86)\\Windows Kits\\10\\bin");
+    if !kits.exists() {
+        return None;
+    }
+    let mut versions: Vec<std::path::PathBuf> = std::fs::read_dir(kits)
+        .ok()?
+        .flatten()
+        .map(|e| e.path().join("x64").join("makeappx.exe"))
+        .filter(|p| p.exists())
+        .collect();
+    versions.sort_by(|a, b| b.cmp(a));
+    versions.into_iter().next()
+}
+
+#[cfg(target_os = "windows")]
 #[command]
 pub async fn ipc_register_context_menu(enable: bool) -> Result<(), String> {
     let exe_path = std::env::current_exe()
@@ -374,34 +613,75 @@ pub async fn ipc_register_context_menu(enable: bool) -> Result<(), String> {
     let parent_base = "Software\\Classes\\Directory\\shell\\PicSharp";
 
     if enable {
+        // 写入 ExePath 供 IExplorerCommand DLL 读取
+        let ctx_base = "Software\\PicSharp\\ContextMenu";
+        let _ = reg_set_value(ctx_base, "ExePath", &exe_str);
+
+        try_install_sparse_package(&exe_path);
+
+        // MSIX SurrogateServer 在开发者模式下走 dllhost（out-of-process），
+        // 但 IExplorerCommand 没有 proxy/stub，会导致 hang。
+        // 额外注册 InprocServer32 让 Shell 直接 in-process 加载 DLL，绕过 dllhost。
+        let dll_path = {
+            let pkg_dir = exe_path
+                .parent()
+                .map(|d| d.join("sparse-pkg").join("picsharp_shell_command.dll"))
+                .filter(|p| p.exists())
+                .or_else(|| {
+                    exe_path.parent().map(|d| d.join("resources").join("picsharp_shell_command.dll"))
+                })
+                .filter(|p| p.exists())
+                .or_else(|| {
+                    exe_path.parent().map(|d| d.join("picsharp_shell_command.dll"))
+                });
+            pkg_dir
+        };
+        if let Some(dll) = dll_path.filter(|p| p.exists()) {
+            let dll_str = dll.to_string_lossy();
+            let clsids = [
+                ("ac652165-9b15-48e8-a09d-e67452cbb971", "PicSharp 后台压缩"),
+                ("7d788199-bfba-4128-ab4c-a9a3ec12f0fa", "PicSharp 后台监听"),
+                ("d15e4e90-c56c-48be-b021-ee9bfa496c19", "PicSharp 打开设置"),
+            ];
+            for (clsid, title) in &clsids {
+                let clsid_base = format!("Software\\Classes\\CLSID\\{{{}}}", clsid);
+                let _ = reg_set_default(&clsid_base, title);
+                let inproc = format!("{}\\InprocServer32", clsid_base);
+                let _ = reg_set_default(&inproc, &dll_str);
+                let _ = reg_set_value(&inproc, "ThreadingModel", "STA");
+            }
+            info!("[ContextMenu] InprocServer32 registered for all CLSIDs → dll: {}", dll_str);
+        } else {
+            info!("[ContextMenu] DLL not found, skip InprocServer32 registration");
+        }
+
         // Parent key: MUIVerb + SubCommands="" + Icon
         reg_set_value(parent_base, "MUIVerb", "PicSharp")?;
         reg_set_value(parent_base, "SubCommands", "")?;
         reg_set_value(parent_base, "Icon", &exe_str)?;
 
-        let subcommands: Vec<(&str, &str, Option<String>)> = vec![
-            ("01_compress", "后台压缩", Some(format!("\"{}\" --action compress-silent \"%1\"", exe_str))),
-            ("02_watch", "后台监听", Some(format!("\"{}\" --action watch-silent \"%1\"", exe_str))),
-            ("03_sep", "", None),
-            ("04_settings", "打开设置", Some(format!("\"{}\" --action settings", exe_str))),
+        let subcommands: Vec<(&str, &str, Option<String>, bool)> = vec![
+            ("01_compress", "后台压缩", Some(format!("\"{}\" --action compress-silent \"%1\"", exe_str)), false),
+            ("02_watch", "后台监听", Some(format!("\"{}\" --action watch-silent \"%1\"", exe_str)), true),   // 0x40 = separator after
+            ("03_settings", "打开设置", Some(format!("\"{}\" --action settings", exe_str)), false),
         ];
 
-        for (sub_name, display, cmd) in &subcommands {
+        for (sub_name, display, cmd, sep_after) in &subcommands {
             let sub_base = format!("{}\\shell\\{}", parent_base, sub_name);
-            if sub_name == &"03_sep" {
-                reg_set_value(&sub_base, "MUIVerb", "")?;
+            reg_set_value(&sub_base, "MUIVerb", display)?;
+            if *sep_after {
                 reg_set_dword(&sub_base, "CommandFlags", "0x40")?;
-            } else {
-                reg_set_value(&sub_base, "MUIVerb", display)?;
-                if let Some(cmd_value) = cmd {
-                    let cmd_key = format!("{}\\command", sub_base);
-                    reg_set_default(&cmd_key, cmd_value)?;
-                }
+            }
+            if let Some(cmd_value) = cmd {
+                let cmd_key = format!("{}\\command", sub_base);
+                reg_set_default(&cmd_key, cmd_value)?;
             }
             info!("[ContextMenu] Registered sub: {}", sub_name);
         }
         info!("[ContextMenu] Cascading menu registered");
     } else {
+        try_uninstall_sparse_package();
+
         // Delete parent key and all sub-keys recursively
         let _ = Command::new("reg")
             .args(["delete", &format!("HKCU\\{}", parent_base), "/f"])
@@ -410,6 +690,20 @@ pub async fn ipc_register_context_menu(enable: bool) -> Result<(), String> {
         for old_key in &["PicSharp_Compress", "PicSharp_Watch"] {
             let _ = Command::new("reg")
                 .args(["delete", &format!("HKCU\\Software\\Classes\\Directory\\shell\\{}", old_key), "/f"])
+                .output();
+        }
+        // 移除 IExplorerCommand DLL 使用的 ExePath
+        let _ = Command::new("reg")
+            .args(["delete", "HKCU\\Software\\PicSharp\\ContextMenu", "/f"])
+            .output();
+        // 移除 InprocServer32 CLSID 注册
+        for clsid in &[
+            "ac652165-9b15-48e8-a09d-e67452cbb971",
+            "7d788199-bfba-4128-ab4c-a9a3ec12f0fa",
+            "d15e4e90-c56c-48be-b021-ee9bfa496c19",
+        ] {
+            let _ = Command::new("reg")
+                .args(["delete", &format!("HKCU\\Software\\Classes\\CLSID\\{{{}}}", clsid), "/f"])
                 .output();
         }
         info!("[ContextMenu] Removed all PicSharp context menu entries");

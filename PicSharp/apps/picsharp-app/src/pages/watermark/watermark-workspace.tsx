@@ -209,7 +209,7 @@ function WatermarkWorkspace() {
   return (
     <div
       className='relative flex h-full gap-3'
-      style={{ backgroundColor: 'rgb(236, 237, 238)' }}
+      style={{ backgroundColor: 'rgb(243, 243, 243)' }}
     >
       {isDragOver && (
         <div className='pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl bg-blue-500/10 backdrop-blur-[2px]'>

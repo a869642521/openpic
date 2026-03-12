@@ -44,8 +44,6 @@ function ToolbarCompress() {
     outputMode,
     saveToFolder,
     saveAsFileSuffix,
-    thresholdEnable,
-    thresholdValue,
     sizeFilterEnable,
     sizeFilterValue,
     convertEnable,
@@ -172,7 +170,6 @@ function ToolbarCompress() {
         compressionMode,
         compressionLevel,
         compressionType,
-        limitCompressRate: thresholdEnable ? thresholdValue : undefined,
         tinifyApiKeys: tinypngApiKeys.map((key) => key.api_key),
         save: {
           mode: outputMode,
@@ -227,14 +224,12 @@ function ToolbarCompress() {
           } else {
             rejected++;
             rejectedList.push(res);
-            targetFile.status = ICompressor.Status.Failed;
-            targetFile.errorMessage = 'Process failed,Please try again';
             r('file_not_found_after_compression', {
               success: true,
               data: res,
             });
           }
-          eventEmitter.emit('update_file_item', targetFile.path);
+          eventEmitter.emit('update_file_item', targetFile?.path ?? res.input_path);
           if (indicatorRef.current) {
             indicatorRef.current.textContent = `${calProgress(fulfilled + rejected, files.length)}%`;
           }
@@ -310,7 +305,7 @@ function ToolbarCompress() {
       size='sm'
       disabled={disabledCompress}
       onClick={handleCompress}
-      className='relative h-full min-h-0 w-full flex-1 rounded-none border-0 bg-blue-600 px-4 text-white transition-colors hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-0 disabled:opacity-50 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700'
+      className='relative h-full min-h-0 w-full flex-1 rounded-none border-0 bg-gradient-to-b from-black to-neutral-700 px-4 text-white transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-0 disabled:opacity-50 dark:from-black dark:to-neutral-700 dark:text-white'
     >
       <div
         className={cn(

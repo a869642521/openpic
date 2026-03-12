@@ -60,7 +60,7 @@ export default {
   'settings.context_menu.features_title': '菜单功能',
   'settings.context_menu.features_desc': '启用后，右键点击文件夹将出现以下快捷操作：',
   'settings.context_menu.feature_compress_title': '后台压缩',
-  'settings.context_menu.feature_compress_desc': '使用当前压缩设置，在后台自动压缩文件夹内的所有图片，右下角弹窗显示实时进度',
+  'settings.context_menu.feature_compress_desc': '使用当前压缩设置，打开窗口显示文件夹内图片，可预览后点击开始压缩',
   'settings.context_menu.feature_watch_title': '后台监听',
   'settings.context_menu.feature_watch_desc': '将文件夹添加到监听列表，自动处理新增和变更的图片文件',
   'settings.context_menu.feature_settings_title': '打开设置',
@@ -73,6 +73,7 @@ export default {
   'settings.context_menu.go_tinypng': 'TinyPNG 设置',
   // Background compress/watch notifications
   'bg_compress.no_images': '未找到可压缩的图片文件',
+  'bg_compress.started': '开始压缩 {count} 张图片',
   'bg_compress.progress_title': '后台压缩中...',
   'bg_compress.completed_title': '压缩完成',
   'bg_compress.completed_desc': '已压缩 {fulfilled} 张，失败 {rejected} 张，共 {total} 张，节省 {saved}',
@@ -137,7 +138,12 @@ export default {
   'compression.options.title': '压缩选项',
   'compression.options.mode.auto': '自动',
   'compression.options.mode.filter': '过滤',
+  'compression.options.compression_mode': '压缩模式',
+  'compression.options.compression_mode.help':
+    '自动：TinyPNG 优先，不可用则本地重试\nTinyPNG：仅云端，需联网\n本地：仅本地，无需联网',
   'compression.options.compression_type': '压缩类型',
+  'compression.options.threshold': '压缩率限制',
+  'compression.options.threshold.value_label': '最小压缩率',
   'compression.options.size_filter.title': '图片过滤',
   'compression.options.size_filter.label': '过滤小于',
   'compression.options.size_filter.description': '不压缩小于该大小的图片',
@@ -151,6 +157,7 @@ export default {
   'compression.options.common_hints.placeholder': '输入压缩要求，如 500KB、80% 等',
   'compression.options.yes_no.no': '否',
   'compression.options.yes_no.yes': '是',
+  'compression.options.extra_options.title': '更多选项',
   'compression.options.keep_metadata.title': '保留元数据',
   'compression.options.keep_metadata.help':
     'EXIF：拍摄参数（相机、镜头、时间、GPS等）；\nICC：色彩配置文件（确保颜色显示一致）；\nXMP/IPTC：版权、作者、关键词等描述信息。\n它们统称为元数据，即图片的隐藏信息。\n建议：存档或证明版权时保留；用于网页、开发或匿名投稿时清除以保护隐私并减小文件。',

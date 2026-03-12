@@ -59,7 +59,7 @@ const enUS = {
   'settings.context_menu.features_title': 'Menu Actions',
   'settings.context_menu.features_desc': 'When enabled, right-clicking a folder will show these quick actions:',
   'settings.context_menu.feature_compress_title': 'Background Compress',
-  'settings.context_menu.feature_compress_desc': 'Compress all images in the folder using current settings, with real-time progress in a bottom-right notification.',
+  'settings.context_menu.feature_compress_desc': 'Open window with folder images. Preview and click Start to compress.',
   'settings.context_menu.feature_watch_title': 'Background Watch',
   'settings.context_menu.feature_watch_desc': 'Add the folder to the watch list, automatically processing new and changed image files.',
   'settings.context_menu.feature_settings_title': 'Open Settings',
@@ -72,6 +72,7 @@ const enUS = {
   'settings.context_menu.go_tinypng': 'TinyPNG Settings',
   // Background compress/watch notifications
   'bg_compress.no_images': 'No compressible image files found.',
+  'bg_compress.started': 'Compressing {count} images',
   'bg_compress.progress_title': 'Compressing...',
   'bg_compress.completed_title': 'Compression Complete',
   'bg_compress.completed_desc': 'Compressed {fulfilled}, failed {rejected}, total {total}, saved {saved}',
@@ -139,7 +140,12 @@ const enUS = {
   'compression.options.title': 'Compression Options',
   'compression.options.mode.auto': 'Auto',
   'compression.options.mode.filter': 'Filter',
+  'compression.options.compression_mode': 'Compression Mode',
+  'compression.options.compression_mode.help':
+    'Auto: TinyPNG first, fallback to local\nTinyPNG: Cloud only, needs network\nLocal: Local only, no network',
   'compression.options.compression_type': 'Compression Type',
+  'compression.options.threshold': 'Compression Rate Limit',
+  'compression.options.threshold.value_label': 'Min. rate',
   'compression.options.size_filter.title': 'Image Filter',
   'compression.options.size_filter.label': 'Filter smaller than',
   'compression.options.size_filter.description': 'Skip compressing images smaller than this size',
@@ -153,6 +159,7 @@ const enUS = {
   'compression.options.common_hints.placeholder': 'e.g. 500KB, 80%',
   'compression.options.yes_no.no': 'No',
   'compression.options.yes_no.yes': 'Yes',
+  'compression.options.extra_options.title': 'More Options',
   'compression.options.keep_metadata.title': 'Keep Metadata',
   'compression.options.keep_metadata.help': `EXIF: Capture params (camera, lens, time, GPS, etc.);
 ICC: Color profile (ensures consistent color display);

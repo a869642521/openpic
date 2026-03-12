@@ -8,7 +8,8 @@ import { parseOpenWithFiles } from '@/utils/launch';
 import useAppStore from '@/store/app';
 import useCompressionStore from '@/store/compression';
 import useSettingsStore from '@/store/settings';
-import { isValidArray, isProd, isLinux, isMac, calProgress } from '@/utils';
+import { isValidArray, isProd, isLinux, isMac } from '@/utils';
+import i18next from 'i18next';
 import { parsePaths, humanSize } from '@/utils/fs';
 import { VALID_IMAGE_EXTS, SettingsKey, CompressionMode, CompressionOutputMode, WatermarkType } from '@/constants';
 import { useNavigate } from '@/hooks/useNavigate';
@@ -31,7 +32,6 @@ import { useTrafficLightStore } from '@/store/trafficLight';
 import { useReport } from '@/hooks/useReport';
 import Compressor from '@/utils/compressor';
 import { defaultWatchFolderSettings } from '@/store/compression';
-import { Progress } from 'antd';
 
 if (isProd) {
   window.oncontextmenu = (e) => {
@@ -44,7 +44,7 @@ export default function AppLayout() {
   const progressRef = useRef<PageProgressRef>(null);
   const navigate = useNavigate();
   const t = useI18n();
-  const { messageApi, notificationApi } = useContext(AppContext);
+  const { messageApi } = useContext(AppContext);
   const r = useReport();
 
   useEffect(() => {
@@ -75,11 +75,18 @@ export default function AppLayout() {
         }
         reset();
         if (mode === 'ns_compress') {
+          i18next.changeLanguage(useSettingsStore.getState()[SettingsKey.Language] || undefined);
           const fileInfos = await parsePaths(paths, VALID_IMAGE_EXTS);
-          setMode('classic');
-          setWorking(true);
-          setClassicFiles(fileInfos);
-          navigate('/compression/classic/workspace');
+          if (fileInfos.length > 0) {
+            setMode('classic');
+            setWorking(true);
+            setClassicFiles(fileInfos);
+            sendTextNotification('PicSharp', t('bg_compress.started', { count: fileInfos.length }));
+            navigate('/compression/classic/workspace');
+          } else {
+            sendTextNotification('PicSharp', t('bg_compress.no_images'));
+            reset();
+          }
         } else if (mode === 'ns_watch_and_compress') {
           await updateWatchHistory(paths[0]);
           setMode('watch');
@@ -112,28 +119,6 @@ export default function AppLayout() {
         let fulfilled = 0;
         let rejected = 0;
         let totalSaved = 0;
-
-        const BG_KEY = 'bg-compress-progress';
-        const updateNotification = (pct: number, done?: boolean) => {
-          notificationApi?.open({
-            key: BG_KEY,
-            message: done ? t('bg_compress.completed_title') : t('bg_compress.progress_title'),
-            description: done ? (
-              <div className='text-xs text-neutral-500'>
-                {t('bg_compress.completed_desc', { fulfilled, rejected, total, saved: humanSize(totalSaved) })}
-              </div>
-            ) : (
-              <div className='flex flex-col gap-1.5'>
-                <Progress percent={pct} size='small' strokeColor='#3b82f6' />
-                <span className='text-xs text-neutral-500'>{fulfilled + rejected} / {total}</span>
-              </div>
-            ),
-            placement: 'bottomRight',
-            duration: done ? 5 : 0,
-          });
-        };
-
-        updateNotification(0);
 
         await new Compressor({
           concurrency: s[SettingsKey.Concurrency] ?? 6,
@@ -170,22 +155,18 @@ export default function AppLayout() {
           (res) => {
             fulfilled++;
             totalSaved += Math.max(0, (res.input_size ?? 0) - (res.output_size ?? 0));
-            updateNotification(calProgress(fulfilled + rejected, total));
           },
           () => {
             rejected++;
-            updateNotification(calProgress(fulfilled + rejected, total));
           },
         );
 
-        updateNotification(100, true);
         sendTextNotification(
           'PicSharp',
           t('bg_compress.completed_desc', { fulfilled, rejected, total, saved: humanSize(totalSaved) }),
         );
       } catch (e) {
         console.error('[silent compress]', e);
-        notificationApi?.destroy('bg-compress-progress');
         sendTextNotification('PicSharp', t('bg_compress.failed'));
       }
     }
@@ -207,17 +188,6 @@ export default function AppLayout() {
       });
 
       const folderName = path.split(/[\/\\]/).pop() || path;
-      notificationApi?.open({
-        key: 'bg-watch-started',
-        message: t('bg_watch.started_title'),
-        description: (
-          <span className='text-xs text-neutral-500'>
-            {t('bg_watch.started_desc', { folder: folderName })}
-          </span>
-        ),
-        placement: 'bottomRight',
-        duration: 5,
-      });
       sendTextNotification('PicSharp', t('bg_watch.started_desc', { folder: folderName }));
     }
 
@@ -236,7 +206,10 @@ export default function AppLayout() {
             process('ns_watch', payload.paths);
             break;
           case 'compress-silent':
-            handleSilentCompress(payload.paths);
+          case 'ns_compress':
+            await WebviewWindow.getCurrent().show();
+            await WebviewWindow.getCurrent().setFocus();
+            process('ns_compress', payload.paths);
             break;
           case 'watch-silent':
             if (payload.paths[0]) handleSilentWatch(payload.paths[0]);
@@ -333,7 +306,9 @@ export default function AppLayout() {
       unlistenNsCompressSilent = await currentWindow.listen('ns_compress_silent', async (event) => {
         if (currentWindow.label !== 'main') return;
         const paths = event.payload as string[];
-        handleSilentCompress(paths);
+        await currentWindow.show();
+        await currentWindow.setFocus();
+        process('ns_compress', paths);
       });
       unlistenNsWatchSilent = await currentWindow.listen('ns_watch_silent', async (event) => {
         if (currentWindow.label !== 'main') return;
@@ -448,9 +423,8 @@ export default function AppLayout() {
     <ErrorBoundary>
       <div
         className='relative flex h-screen w-screen'
-        style={{ backgroundColor: 'rgb(236, 237, 238)' }}
+        style={{ backgroundColor: 'rgb(243, 243, 243)' }}
       >
-        <PageProgress ref={progressRef} description={t('tips.import_files')} />
         {WebviewWindow.getCurrent().label === 'main' && <SidebarNav />}
         <div className='flex min-w-0 flex-1 flex-col overflow-hidden bg-background'>
           <Header />
@@ -459,13 +433,14 @@ export default function AppLayout() {
               'min-h-0 flex-1 overflow-hidden',
               location.pathname.startsWith('/settings') ? 'p-0' : 'p-3 pl-0',
             )}
-            style={{ backgroundColor: 'rgb(236, 237, 238)' }}
+            style={{ backgroundColor: 'rgb(243, 243, 243)' }}
           >
             <main
               className='relative h-full overflow-hidden rounded-xl'
               style={{ backgroundColor: 'rgb(252, 252, 252)' }}
             >
               <Outlet />
+              <PageProgress ref={progressRef} description={t('tips.import_files')} />
             </main>
           </div>
         </div>

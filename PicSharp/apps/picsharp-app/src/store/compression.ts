@@ -14,8 +14,6 @@ export interface ClassicSettings {
   compressionLevel: number;
   sizeFilterEnable: boolean;
   sizeFilterValue: number;
-  thresholdEnable: boolean;
-  thresholdValue: number;
   outputMode: CompressionOutputMode;
   saveAsFileSuffix: string;
   saveToFolder: string;
@@ -40,12 +38,10 @@ export interface ClassicSettings {
 
 export const defaultClassicSettings: ClassicSettings = {
   compressionMode: CompressionMode.Local,
-  compressionType: CompressionType.Lossy,
+  compressionType: CompressionType.Lossless,
   compressionLevel: 3,
   sizeFilterEnable: false,
   sizeFilterValue: 500,
-  thresholdEnable: false,
-  thresholdValue: 0.1,
   outputMode: CompressionOutputMode.Overwrite,
   saveAsFileSuffix: '_min',
   saveToFolder: '',
@@ -57,7 +53,7 @@ export const defaultClassicSettings: ClassicSettings = {
   resizeMode: ResizeMode.Scale,
   resizeScale: 50,
   resizeDimensions: [0, 0],
-  resizeFit: ResizeFit.Inside,
+  resizeFit: ResizeFit.Contain,
   watermarkType: WatermarkType.None,
   watermarkPosition: WatermarkPosition.BottomRight,
   watermarkText: '',
@@ -80,7 +76,7 @@ export const defaultWatchFolderSettings: WatchFolderSettings = {
   resizeMode: ResizeMode.Scale,
   resizeScale: 50,
   resizeDimensions: [0, 0],
-  resizeFit: ResizeFit.Inside,
+  resizeFit: ResizeFit.Contain,
   watermarkEnable: false,
   watermarkType: WatermarkType.None,
   watermarkText: '',
@@ -96,8 +92,6 @@ export const defaultWatchFolderSettings: WatchFolderSettings = {
   compressionOutput: CompressionOutputMode.Overwrite,
   saveAsFileSuffix: '_min',
   saveToFolder: '',
-  thresholdEnable: false,
-  thresholdValue: 0.1,
 };
 
 interface CompressionState {

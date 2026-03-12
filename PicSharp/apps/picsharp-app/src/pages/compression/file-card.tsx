@@ -404,7 +404,7 @@ function FileCard(props: FileCardProps) {
 
   return (
     <div
-      className='group relative rounded-lg transition-shadow hover:shadow-md'
+      className='group relative min-w-0 rounded-lg transition-shadow hover:shadow-md'
       style={{ backgroundColor: 'rgb(252, 252, 252)', border: '1px solid rgb(219, 219, 220)' }}
     >
       <div
@@ -412,7 +412,7 @@ function FileCard(props: FileCardProps) {
       >
         <div
           className='text-0 relative flex aspect-[4/3] cursor-pointer items-center justify-center overflow-hidden'
-          style={{ backgroundColor: 'rgb(243, 244, 248)' }}
+          style={{ backgroundColor: 'rgb(255, 255, 255)' }}
           onClick={handleImageClick}
         >
           <div className='absolute left-2 top-2 z-10 flex items-start'>

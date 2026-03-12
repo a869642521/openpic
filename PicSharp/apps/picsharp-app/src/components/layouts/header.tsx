@@ -19,7 +19,7 @@ function Header() {
           'relative flex h-[48px] w-full flex-shrink-0 items-center',
           isMac && isTrafficLightVisible ? 'px-[73px]' : 'px-2',
         )}
-        style={{ backgroundColor: 'rgb(236, 237, 238)' }}
+        style={{ backgroundColor: 'rgb(243, 243, 243)' }}
         data-tauri-drag-region
       >
         <div className='absolute right-2 flex items-center gap-2'>
@@ -38,7 +38,7 @@ function Header() {
           'relative flex h-[48px] w-full flex-shrink-0 items-center justify-end',
           isMac && isTrafficLightVisible ? 'px-[73px]' : 'px-2',
         )}
-        style={{ backgroundColor: 'rgb(236, 237, 238)' }}
+        style={{ backgroundColor: 'rgb(243, 243, 243)' }}
         data-tauri-drag-region
       >
         <WindowControl showControls={!isMac} showFullscreen={!isMac} showAlwaysOnTop={true} />

@@ -531,7 +531,7 @@ export const ConvertPanel = memo(function ConvertPanel({
 
 // ─── ResizeFit visual options ─────────────────────────────────────────────────
 
-const RESIZE_FIT_OPTIONS: {
+export const RESIZE_FIT_OPTIONS: {
   fit: ResizeFit;
   nameKey: string;
   descKey: string;

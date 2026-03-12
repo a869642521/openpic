@@ -144,7 +144,7 @@ function WatchFileManager() {
               className='grid gap-3 contain-layout pb-[40px]'
               style={{
                 contentVisibility: 'auto',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
               }}
             >
               {dataList.map((file) => (

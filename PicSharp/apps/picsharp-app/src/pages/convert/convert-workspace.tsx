@@ -204,7 +204,7 @@ function ConvertWorkspace() {
   };
 
   return (
-    <div className='relative flex h-full gap-3' style={{ backgroundColor: 'rgb(236, 237, 238)' }}>
+    <div className='relative flex h-full gap-3' style={{ backgroundColor: 'rgb(243, 243, 243)' }}>
       {isDragOver && (
         <div className='pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl bg-blue-500/10 backdrop-blur-[2px]'>
           <div className='rounded-xl border-2 border-dashed border-blue-400 bg-white/80 px-8 py-6 text-center shadow-lg'>

@@ -16,7 +16,7 @@ import message from '@/components/message';
 import { parseClipboardImages } from '@/utils/clipboard';
 import { downloadDir } from '@tauri-apps/api/path';
 import { AppContext } from '@/routes';
-import UploadWidget from '@/components/animated-icon/upload-widget';
+import InteractiveFolder from '@/components/animated-icon/interactive-folder';
 import FormatsTips from './formats-tips';
 import { useReport } from '@/hooks/useReport';
 
@@ -157,7 +157,7 @@ function ClassicCompressionGuide() {
       ref={dropzoneRef}
       className='group relative flex h-full flex-col items-center justify-center p-6 transition-all duration-300 [&.drag-active]:from-indigo-50/50 [&.drag-active]:to-indigo-100/50'
     >
-      <UploadWidget />
+      <InteractiveFolder />
       <div className='relative mt-4 text-center'>
         <p className='mx-auto max-w-2xl text-lg'>
           {t('page.compression.classic.upload_description')}

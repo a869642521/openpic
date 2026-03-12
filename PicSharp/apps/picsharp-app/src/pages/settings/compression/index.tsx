@@ -2,7 +2,6 @@ import { Card } from '@/components/ui/card';
 import Mode from './mode';
 import Section from '../section';
 import Output from './output';
-import Threshold from './threshold';
 import { useEffect, useRef } from 'react';
 import Convert from './convert';
 import WatchIgnore from './watch-ignore';
@@ -55,7 +54,6 @@ export default function SettingsCompression() {
       </Card>
       <Card ref={outputElRef}>
         <Output />
-        <Threshold />
       </Card>
       <Card>
         <Convert />

@@ -1,4 +1,4 @@
-﻿import { memo, useContext, useState, useRef, useMemo, useEffect } from 'react';
+import { memo, useContext, useState, useRef, useMemo, useEffect } from 'react';
 import { useI18n } from '@/i18n';
 import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';

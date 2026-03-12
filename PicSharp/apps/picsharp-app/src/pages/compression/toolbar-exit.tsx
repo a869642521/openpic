@@ -16,7 +16,7 @@ function ToolbarClear(props: { mode: 'classic' | 'watch'; variant?: 'ghost' | 'b
     useSelector(['inCompressing', 'reset', 'resetWatchOnly']),
   );
   const t = useI18n();
-  const { messageApi, notificationApi } = useContext(AppContext);
+  const { messageApi } = useContext(AppContext);
 
   const doClear = () => {
     if (props.mode === 'classic') {
@@ -28,7 +28,6 @@ function ToolbarClear(props: { mode: 'classic' | 'watch'; variant?: 'ghost' | 'b
     }
     toast.dismiss();
     messageApi?.destroy();
-    notificationApi?.destroy();
   };
 
   const handleClear = async () => {

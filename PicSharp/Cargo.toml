@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "apps/picsharp-app/src-tauri",
+  "apps/picsharp-shell-command",
 ]
 resolver = "2"
 

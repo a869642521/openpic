@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import * as ProgressPrimitive from '@radix-ui/react-progress';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface PageProgressRef {
@@ -33,8 +34,6 @@ const PageProgress = forwardRef<
       indicatorRef.current.style.transform = `translateX(-100%)`;
     }
     rootRef.current?.classList.add('hidden');
-    rootRef.current?.parentElement?.style.removeProperty('position');
-    rootRef.current?.parentElement?.style.removeProperty('overflow');
   };
 
   useImperativeHandle(ref, () => {
@@ -42,8 +41,6 @@ const PageProgress = forwardRef<
       show: (ease: boolean = false) => {
         if (!rootRef.current) return;
         rootRef.current?.classList.remove('hidden');
-        rootRef.current.parentElement?.style.setProperty('position', 'relative');
-        rootRef.current.parentElement?.style.setProperty('overflow', 'hidden');
         if (ease) {
           let progress = 0;
           const startTime = performance.now();
@@ -83,33 +80,27 @@ const PageProgress = forwardRef<
 
   return (
     <div
-      className='fixed left-0 top-0 z-[100] flex hidden h-full w-full flex-col items-center justify-center'
+      className='absolute inset-0 z-10 flex hidden h-full w-full flex-col items-center justify-center bg-white/90 backdrop-blur-sm dark:bg-neutral-950/90'
       ref={rootRef}
     >
-      <div
-        className='absolute inset-0 z-0'
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(226, 232, 240, 0.15), transparent 70%), #000000',
-        }}
-      />
-      {description && (
-        <div className='relative z-10 mb-2 text-center text-sm text-neutral-100 dark:text-neutral-400'>
-          {description}
-        </div>
-      )}
-      <div
-        className={cn(
-          'relative h-2 w-[50%] overflow-hidden rounded-full border-[1px] border-solid border-neutral-100 dark:border-neutral-800',
-          className,
+      <div className='flex flex-col items-center gap-4'>
+        <Loader2 className='h-8 w-8 animate-spin text-foreground/70' />
+        {description && (
+          <span className='text-sm text-foreground/80'>{description}</span>
         )}
-        {...props}
-      >
         <div
-          ref={indicatorRef}
-          className='h-full w-full flex-1 bg-neutral-900 dark:bg-neutral-400'
-          style={{ transform: `translateX(-100%)` }}
-        />
+          className={cn(
+            'relative h-1.5 w-48 overflow-hidden rounded-full bg-neutral-900/20 dark:bg-neutral-50/20',
+            className,
+          )}
+          {...props}
+        >
+          <div
+            ref={indicatorRef}
+            className='h-full w-full bg-neutral-900 transition-transform duration-300 ease-out dark:bg-neutral-50'
+            style={{ transform: `translateX(-100%)` }}
+          />
+        </div>
       </div>
     </div>
   );

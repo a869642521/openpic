@@ -8,8 +8,6 @@
   "compression_level": 3,
   "compression_keep_metadata": ["copyright", "creator", "location"],
   "concurrency": 6,
-  "compression_threshold_enable": false,
-  "compression_threshold_value": 0.1,
   "compression_size_filter_enable": false,
   "compression_size_filter_value": 500,
   "compression_output":"overwrite",

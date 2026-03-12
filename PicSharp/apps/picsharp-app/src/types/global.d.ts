@@ -47,8 +47,6 @@ declare global {
     compressionOutput?: CompressionOutputMode;
     saveAsFileSuffix?: string;
     saveToFolder?: string;
-    thresholdEnable?: boolean;
-    thresholdValue?: number;
   }
 
   interface WatchFolder {

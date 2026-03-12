@@ -74,8 +74,6 @@ function CompressionWatch() {
       const outputMode = folderSettings.compressionOutput ?? CompressionOutputMode.Overwrite;
       const saveAsFileSuffix = folderSettings.saveAsFileSuffix ?? '_min';
       const saveToFolder = folderSettings.saveToFolder ?? '';
-      const thresholdEnable = folderSettings.thresholdEnable ?? false;
-      const thresholdValue = folderSettings.thresholdValue ?? 0.1;
       const preserveMetadata =
         folderSettings.preserveMetadata ??
         ('keepMetadata' in folderSettings && (folderSettings as any).keepMetadata
@@ -107,7 +105,6 @@ function CompressionWatch() {
         compressionMode,
         compressionLevel,
         compressionType,
-        limitCompressRate: thresholdEnable ? thresholdValue : undefined,
         tinifyApiKeys: tinypngApiKeys.map((key) => key.api_key),
         save: {
           mode: outputMode,

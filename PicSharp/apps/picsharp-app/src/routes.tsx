@@ -30,25 +30,21 @@ import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useTheme } from '@/components/theme-provider';
 import { ThemeProvider } from './components/theme-provider';
-import { message, notification } from 'antd';
+import { message } from 'antd';
 import { createContext } from 'react';
 
 export const AppContext = createContext<{
   messageApi: ReturnType<typeof message.useMessage>[0];
-  notificationApi: ReturnType<typeof notification.useNotification>[0];
 }>({
   messageApi: null,
-  notificationApi: null,
 });
 
 export default function AppRoutes() {
   const [messageApi, messageContextHolder] = message.useMessage();
-  const [notificationApi, notificationContextHolder] = notification.useNotification();
   return (
     <ThemeProvider>
-      <AppContext.Provider value={{ messageApi, notificationApi }}>
+      <AppContext.Provider value={{ messageApi }}>
         {messageContextHolder}
-        {notificationContextHolder}
         <TooltipProvider delayDuration={100}>
           <Toaster
             position='top-center'

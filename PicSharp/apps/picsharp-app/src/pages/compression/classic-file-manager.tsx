@@ -33,14 +33,17 @@ function FileManager() {
   const dragDropController = useRef<UnlistenFn | null>(null);
   const r = useReport();
 
-  const dataList = useMemo(() => {
-    let list = files.slice((pageIndex - 1) * pageSize, pageIndex * pageSize);
-    if (list.length === 0 && pageIndex !== 1) {
-      list = files.slice((pageIndex - 2) * pageSize, (pageIndex - 1) * pageSize);
-      setPageIndex(pageIndex - 1);
+  const dataList = useMemo(
+    () => files.slice((pageIndex - 1) * pageSize, pageIndex * pageSize),
+    [files, pageIndex, pageSize],
+  );
+
+  useEffect(() => {
+    if (dataList.length === 0 && pageIndex > 1 && files.length > 0) {
+      const lastValidPage = Math.max(1, Math.ceil(files.length / pageSize));
+      setPageIndex(lastValidPage);
     }
-    return list;
-  }, [files, pageIndex, pageSize]);
+  }, [dataList.length, files.length, pageIndex, pageSize]);
 
   useEffect(() => {
     const state = useCompressionStore.getState();
@@ -139,7 +142,7 @@ function FileManager() {
   };
 
   return (
-    <div className='relative flex h-full gap-3' style={{ backgroundColor: 'rgb(236, 237, 238)' }}>
+    <div className='relative flex h-full gap-3' style={{ backgroundColor: 'rgb(243, 243, 243)' }}>
       {isDragOver && (
         <div className='pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl bg-blue-500/10 backdrop-blur-[2px]'>
           <div className='rounded-xl border-2 border-dashed border-blue-400 bg-white/80 px-8 py-6 text-center shadow-lg'>
@@ -186,7 +189,7 @@ function FileManager() {
                     className='grid gap-3 contain-layout'
                     style={{
                       contentVisibility: 'auto',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
                     }}
                   >
                     {group.files.map((file) => (

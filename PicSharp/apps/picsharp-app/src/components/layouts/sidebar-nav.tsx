@@ -65,7 +65,7 @@ export default function SidebarNav() {
           'flex h-screen w-[180px] flex-shrink-0 select-none flex-col justify-between bg-neutral-50 px-4 pb-4 dark:bg-neutral-800',
           isMac ? 'pt-8' : 'pt-4',
         )}
-        style={{ backgroundColor: 'rgb(236, 237, 238)' }}
+        style={{ backgroundColor: 'rgb(243, 243, 243)' }}
         data-tauri-drag-region={isMac}
       >
         <div className='flex flex-col items-stretch gap-1'>
@@ -84,15 +84,15 @@ export default function SidebarNav() {
                 <Button
                   variant={location.pathname.startsWith('/settings') ? 'secondary' : 'ghost'}
                   className={cn(
-                    'h-[60px] w-full justify-start gap-2 px-3 text-foreground shadow-none',
+                    'h-[50px] w-full justify-start gap-2 px-3 shadow-none',
                     location.pathname.startsWith('/settings')
                       ? 'hover:opacity-90'
                       : 'hover:bg-[rgba(252,252,252,0.5)]',
                   )}
                   style={
                     location.pathname.startsWith('/settings')
-                      ? { backgroundColor: 'rgb(252, 252, 252)', boxShadow: 'none' }
-                      : undefined
+                      ? { backgroundColor: 'rgb(252, 252, 252)', boxShadow: 'none', color: '#222222' }
+                      : { color: '#666666' }
                   }
                 >
                   <Settings className='size-4 shrink-0' />
@@ -124,11 +124,15 @@ const NavItem = function NavItem({
       <Button
         variant={isActive ? 'secondary' : 'ghost'}
         className={cn(
-          'h-[60px] w-full justify-start gap-2 rounded-xl px-3 text-sm text-foreground shadow-none',
+          'h-[50px] w-full justify-start gap-2 rounded-xl px-3 text-sm shadow-none',
           !isActive && 'hover:bg-[rgba(252,252,252,0.5)]',
           className,
         )}
-        style={isActive ? { backgroundColor: 'rgb(252, 252, 252)', boxShadow: 'none' } : undefined}
+        style={
+          isActive
+            ? { backgroundColor: 'rgb(252, 252, 252)', boxShadow: 'none', color: '#222222' }
+            : { color: '#666666' }
+        }
       >
         {item.icon}
         <span className='truncate'>{item.title}</span>

@@ -10,7 +10,11 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [],
+    "windows": [
+      {
+        "shadow": false
+      }
+    ],
     "security": {
       "dangerousDisableAssetCspModification": true,
       "assetProtocol": {

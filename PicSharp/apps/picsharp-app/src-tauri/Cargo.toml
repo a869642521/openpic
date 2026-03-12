@@ -70,8 +70,9 @@ tauri-plugin-process = "2"
 tauri-plugin-aptabase = "1.0.0"
 dotenvy_macro = "0.15.7"
 
-[build]
-rustc-wrapper = "~/.cargo/bin/sccache"
+# sccache 已移除：在 Windows 上可能导致编译卡在 651/654 的已知死锁问题
+# [build]
+# rustc-wrapper = "~/.cargo/bin/sccache"
 
 # TODO: cleanup features on objc2 crates
 [target.'cfg(target_os = "macos")'.dependencies]

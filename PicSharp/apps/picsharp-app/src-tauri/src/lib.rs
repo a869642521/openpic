@@ -148,16 +148,27 @@ fn set_window_open_with_payload(app: &AppHandle, mode: &str, paths: Vec<PathBuf>
         error!("[set_window_open_with_payload] -> Failed to get main window");
     }
 }
-#[allow(unused_variables)]
-#[allow(dead_code)]
 #[cfg(desktop)]
 fn set_tray(app: &AppHandle) -> Result<(), tauri::Error> {
-    let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&quit_i])?;
+    let show_i = MenuItem::with_id(app, "show", "显示主窗口", true, None::<&str>)?;
+    let quit_i = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
     let tray: tauri::tray::TrayIcon = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .icon_as_template(true)
-        // .menu(&menu)
+        .menu(&menu)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            "quit" => {
+                app.exit(0);
+            }
+            _ => {}
+        })
         .on_tray_icon_event(|tray, event| match event {
             TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -170,9 +181,7 @@ fn set_tray(app: &AppHandle) -> Result<(), tauri::Error> {
                     let _ = window.set_focus();
                 }
             }
-            _ => {
-                log::info!("unhandled event {event:?}");
-            }
+            _ => {}
         })
         .build(app)
         .map_err(|e| {
@@ -263,8 +272,8 @@ pub fn run() {
                         if !files.is_empty() {
                             allow_file_in_scopes(app, files.clone());
                             let paths: Vec<String> = files.iter().map(|f| f.to_string_lossy().to_string()).collect();
-                            app.emit("ns_compress_silent", paths)
-                                .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_compress_silent: {}", e));
+                            app.emit("ns_compress", paths)
+                                .unwrap_or_else(|e| error!("[Single Instance Emit] -> ns_compress: {}", e));
                         }
                     }
                     Some("watch-silent") => {
@@ -367,6 +376,11 @@ pub fn run() {
                 }
             }
 
+            #[cfg(desktop)]
+            if let Err(e) = set_tray(&app.handle()) {
+                error!("[set_tray] -> Failed to create tray icon: {}", e);
+            }
+
             let inspect = Inspect::new(app.handle().clone())?;
             file_ext::load(inspect);
 
@@ -392,8 +406,8 @@ pub fn run() {
                             let app_handle = app.handle().clone();
                             allow_file_in_scopes(&app_handle, files.clone());
                             app.listen("window-ready", move |_| {
-                                info!("[Setup] -> Launching with --action compress-silent");
-                                set_window_open_with_payload(&app_handle, "compress-silent", files.clone());
+                                info!("[Setup] -> Launching with --action compress (show window)");
+                                set_window_open_with_payload(&app_handle, "ns_compress", files.clone());
                             });
                         }
                     }
