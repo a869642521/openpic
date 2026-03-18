@@ -7,6 +7,10 @@ export interface Dimensions {
   height: number;
 }
 
+export interface ResizeResult extends Dimensions {
+  resized: boolean;
+}
+
 export type Fit = keyof FitEnum;
 
 export function calculateResizeDimensions(
@@ -94,11 +98,11 @@ export interface ResizeFromSharpStreamPayload {
 
 export async function resizeFromSharpStream(
   params: ResizeFromSharpStreamPayload,
-): Promise<Dimensions> {
+): Promise<ResizeResult> {
   const { stream, originalMetadata, options } = params;
 
   if (!originalMetadata.width || !originalMetadata.height) {
-    return originalMetadata;
+    return { width: originalMetadata.width ?? 0, height: originalMetadata.height ?? 0, resized: false };
   }
 
   let resizeParams: ResizeOptions | null = null;
@@ -123,17 +127,11 @@ export async function resizeFromSharpStream(
     // 自定义尺寸
     resizeParams = { fit: 'inside' };
     let useFit = false;
-    if (
-      options.resize_dimensions[0] > 0 &&
-      options.resize_dimensions[0] < originalMetadata.width
-    ) {
+    if (options.resize_dimensions[0] > 0) {
       resizeParams.width = options.resize_dimensions[0];
       useFit = true;
     }
-    if (
-      options.resize_dimensions[1] > 0 &&
-      options.resize_dimensions[1] < originalMetadata.height
-    ) {
+    if (options.resize_dimensions[1] > 0) {
       resizeParams.height = options.resize_dimensions[1];
       useFit = true;
     }
@@ -159,8 +157,9 @@ export async function resizeFromSharpStream(
     return {
       width: info.width,
       height: info.height,
+      resized: true,
     };
   }
 
-  return originalMetadata;
+  return { ...originalMetadata, resized: false };
 }

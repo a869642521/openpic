@@ -1,7 +1,4 @@
-export const isAptabaseEnabled =
-  typeof __PICSHARP_ABE_KEY__ === 'string' &&
-  __PICSHARP_ABE_KEY__.length > 0 &&
-  !__PICSHARP_ABE_KEY__.startsWith('A-00000000-0000-0000-0000-000000000000');
+export const isAptabaseEnabled = false;
 
 const sentryDsn =
   typeof __PICSHARP_SENTRY_DSN__ === 'string' && __PICSHARP_SENTRY_DSN__.length > 0
@@ -9,17 +6,6 @@ const sentryDsn =
     : '';
 
 async function initApm() {
-  if (isAptabaseEnabled) {
-    try {
-      const { init } = await import('@aptabase/web');
-      init(__PICSHARP_ABE_KEY__, {
-        isDebug: import.meta.env.DEV,
-        appVersion: __PICSHARP_VERSION__,
-      });
-    } catch (e) {
-      console.warn('[apm] Aptabase init failed:', e);
-    }
-  }
   if (sentryDsn) {
     try {
       const Sentry = await import('@sentry/react');

@@ -37,7 +37,7 @@ export async function processPngLossy(payload: {
     });
 
     if (options.keep_metadata) transformer.keepMetadata();
-    await applyImageTransformations(transformer, originalMetadata, options);
+    const { resizeApplied } = await applyImageTransformations(transformer, originalMetadata, options);
 
     const convert_results: any[] = await applyImageConversion(
       transformer,
@@ -64,7 +64,7 @@ export async function processPngLossy(payload: {
       finalBuffer = await sharp(quantized, { limitInputPixels: false })
         .withMetadata({
           ...(originalMetadata.exif ? { exif: originalMetadata.exif as any } : {}),
-          ...(originalMetadata.icc ? { icc: originalMetadata.icc } : {}),
+          ...(originalMetadata.icc ? { icc: originalMetadata.icc as unknown as string } : {}),
           ...(originalMetadata.xmp ? { xmp: originalMetadata.xmp as any } : {}),
         })
         .png({ force: true, palette: false, compressionLevel: 9 })
@@ -74,9 +74,11 @@ export async function processPngLossy(payload: {
     const compressedSize = finalBuffer.byteLength;
     const compressionRate = calCompressionRate(originalSize, compressedSize);
     const availableCompressRate = compressionRate >= (options.limit_compress_rate || 0);
+    // 只有 resize 实际发生了尺寸变化时，才无视压缩率强制保存
+    const shouldSave = availableCompressRate || resizeApplied;
     const originalEctypePath = await copyFileToTemp(input_path, options.temp_dir);
 
-    if (availableCompressRate) {
+    if (shouldSave) {
       await writeFile(outputPath, finalBuffer);
     } else {
       if (input_path !== outputPath) {
@@ -88,10 +90,10 @@ export async function processPngLossy(payload: {
       input_path,
       input_size: originalSize,
       output_path: outputPath,
-      output_size: availableCompressRate ? compressedSize : originalSize,
-      compression_rate: availableCompressRate ? compressionRate : 0,
+      output_size: shouldSave ? compressedSize : originalSize,
+      compression_rate: shouldSave ? compressionRate : 0,
       original_temp_path: originalEctypePath,
-      available_compress_rate: availableCompressRate,
+      available_compress_rate: shouldSave,
       hash: await hashFile(outputPath),
       convert_results,
       original_metadata: originalMetadata,
@@ -133,7 +135,7 @@ export async function processPngLossless(payload: {
       (options.convert_enable && isValidArray(options.convert_types));
     if (requiredTransformations) {
       if (options.keep_metadata) transformer.keepMetadata();
-      await applyImageTransformations(transformer, originalMetadata, options);
+      const { resizeApplied } = await applyImageTransformations(transformer, originalMetadata, options);
       const convert_results: any[] = await applyImageConversion(
         transformer,
         outputPath,
@@ -154,8 +156,10 @@ export async function processPngLossless(payload: {
       const compressedSize = optimizedImageBuffer.byteLength;
       const compressionRate = calCompressionRate(originalSize, compressedSize);
       const availableCompressRate = compressionRate >= (options.limit_compress_rate || 0);
+      // 只有 resize 实际发生了尺寸变化时，才无视压缩率强制保存
+      const shouldSave = availableCompressRate || resizeApplied;
       const originalEctypePath = await copyFileToTemp(input_path, options.temp_dir);
-      if (availableCompressRate) {
+      if (shouldSave) {
         await writeFile(outputPath, optimizedImageBuffer);
       } else {
         if (input_path !== outputPath) {
@@ -166,10 +170,10 @@ export async function processPngLossless(payload: {
         input_path,
         input_size: originalSize,
         output_path: outputPath,
-        output_size: availableCompressRate ? compressedSize : originalSize,
-        compression_rate: availableCompressRate ? compressionRate : 0,
+        output_size: shouldSave ? compressedSize : originalSize,
+        compression_rate: shouldSave ? compressionRate : 0,
         original_temp_path: originalEctypePath,
-        available_compress_rate: availableCompressRate,
+        available_compress_rate: shouldSave,
         hash: await hashFile(outputPath),
         convert_results,
         original_metadata: originalMetadata,

@@ -7,7 +7,7 @@ import { exists, remove, mkdir } from '@tauri-apps/plugin-fs';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { withStorageDOMEvents } from './withStorageDOMEvents';
 import { isFunction } from 'radash';
-import { appCacheDir, appDataDir, appLogDir, join } from '@tauri-apps/api/path';
+import { appCacheDir, appDataDir, appLogDir, join, resourceDir } from '@tauri-apps/api/path';
 import { toast } from '@/components/sidecar-error-toast';
 import { captureError, report } from '@/utils/report';
 import { SidecarError } from '@/extends/SidecarError';
@@ -38,6 +38,30 @@ type AppStore = AppState & AppAction;
 
 const errorMessages: string[] = [];
 
+function sendDebugLog(
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>,
+) {
+  fetch('http://127.0.0.1:7318/ingest/75a54541-45a0-44fe-af7e-5197dacb917b', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': 'fe4f29',
+    },
+    body: JSON.stringify({
+      sessionId: 'fe4f29',
+      runId: 'pre-fix',
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+}
+
 const useAppStore = create(
   persist<AppStore>(
     (set, get) => ({
@@ -52,6 +76,15 @@ const useAppStore = create(
           await get().destroySidecar();
           if (getCurrentWebviewWindow().label === 'main') {
             if (isProd) {
+              const sidecarNodePath = await join(await resourceDir(), 'node_modules');
+              // #region agent log
+              sendDebugLog('H4', 'src/store/app.ts:initSidecar:54', 'init-sidecar-entry', {
+                isProd,
+                label: getCurrentWebviewWindow().label,
+                existingOrigin: get().sidecar?.origin || '',
+                sidecarNodePath,
+              });
+              // #endregion
               const command = Command.sidecar('binaries/picsharp-sidecar', '', {
                 env: {
                   PICSHARP_SIDECAR_ENABLE: 'true',
@@ -60,9 +93,15 @@ const useAppStore = create(
                   PICSHARP_SIDECAR_STORE: '{}',
                   PICSHARP_SIDECAR_SENTRY_DSN: __PICSHARP_SIDECAR_SENTRY_DSN__,
                   NODE_ENV: 'production',
+                  NODE_PATH: sidecarNodePath,
                 },
               });
               command.stdout.once('data', (data) => {
+                // #region agent log
+                sendDebugLog('H4', 'src/store/app.ts:initSidecar:65', 'sidecar-stdout-first', {
+                  data: String(data).slice(0, 400),
+                });
+                // #endregion
                 report('sidecar_start', { data });
                 console.log(`[Start Sidecar Output]: ${data}`);
                 if (data.includes(`{"origin":"http://localhost:`)) {
@@ -85,11 +124,28 @@ const useAppStore = create(
                 }
               });
               command.stderr.on('data', (data) => {
+                // #region agent log
+                sendDebugLog('H1', 'src/store/app.ts:initSidecar:87', 'sidecar-stderr', {
+                  chunk: String(data).slice(0, 500),
+                });
+                // #endregion
                 errorMessages.push(data);
                 console.error(`[Start Sidecar Error]: ${data}`);
               });
               const process = await command.spawn();
+              // #region agent log
+              sendDebugLog('H4', 'src/store/app.ts:initSidecar:91', 'sidecar-spawned', {
+                pid: process.pid,
+              });
+              // #endregion
               command.on('close', (payload) => {
+                // #region agent log
+                sendDebugLog('H1', 'src/store/app.ts:initSidecar:92', 'sidecar-close', {
+                  payload,
+                  errorCount: errorMessages.length,
+                  lastError: errorMessages.at(-1)?.slice?.(0, 500) || '',
+                });
+                // #endregion
                 report('sidecar_close', { errorMessages: errorMessages.join('\n'), payload });
                 if (errorMessages.length > 0) {
                   toast({

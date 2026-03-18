@@ -2,14 +2,16 @@ use dotenvy_macro::dotenv;
 use inspect::Inspect;
 use log::{error, info};
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::path::BaseDirectory;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 use tauri::{AppHandle, Emitter, Listener, Manager, Url};
-use tauri_plugin_aptabase::EventTracker;
 use tauri_plugin_fs::FsExt;
 mod clipboard;
 mod command;
@@ -29,6 +31,31 @@ extern crate objc;
 mod macos;
 mod upload;
 mod window;
+
+fn append_debug_log(hypothesis_id: &str, location: &str, message: &str, data: &str) {
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(r"E:\LyamQL\APP\image-resizer02\debug-fe4f29.log")
+    {
+        let escaped_data = data.replace('\\', "\\\\").replace('"', "\\\"");
+        let escaped_message = message.replace('\\', "\\\\").replace('"', "\\\"");
+        let escaped_location = location.replace('\\', "\\\\").replace('"', "\\\"");
+        let escaped_hypothesis = hypothesis_id.replace('\\', "\\\\").replace('"', "\\\"");
+        let _ = writeln!(
+            file,
+            "{{\"sessionId\":\"fe4f29\",\"runId\":\"post-build\",\"hypothesisId\":\"{}\",\"location\":\"{}\",\"message\":\"{}\",\"data\":\"{}\",\"timestamp\":{}}}",
+            escaped_hypothesis,
+            escaped_location,
+            escaped_message,
+            escaped_data,
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|duration| duration.as_millis())
+                .unwrap_or(0)
+        );
+    }
+}
 
 fn init_settings(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let app_data_dir = app.path().app_data_dir()?;
@@ -309,7 +336,7 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_cli::init())
@@ -358,6 +385,30 @@ pub fn run() {
 
     builder
         .setup(|app| {
+            if let Ok(exe_path) = std::env::current_exe() {
+                append_debug_log(
+                    "H4",
+                    "src-tauri/src/lib.rs:setup",
+                    "app-startup-paths",
+                    &format!("exe={}", exe_path.display()),
+                );
+            }
+            if let Ok(resource_dir) = app.path().resource_dir() {
+                let sharp_runtime = resource_dir
+                    .join("node_modules")
+                    .join("@img")
+                    .join("sharp-win32-x64");
+                append_debug_log(
+                    "H1",
+                    "src-tauri/src/lib.rs:setup",
+                    "resource-sharp-runtime",
+                    &format!(
+                        "resource_dir={} sharp_runtime_exists={}",
+                        resource_dir.display(),
+                        sharp_runtime.exists()
+                    ),
+                );
+            }
             match init_settings(&app.handle()) {
                 Ok(()) => {
                     info!("[init_settings] -> Settings initialized");

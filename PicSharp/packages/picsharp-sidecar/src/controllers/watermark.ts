@@ -27,7 +27,7 @@ const PayloadSchema = z.object({
       watermark_image_scale: z.number().min(0).max(1).optional().default(0.15),
     })
     .optional()
-    .default({}),
+    .default({} as any),
   save: z
     .object({
       mode: z.nativeEnum(SaveMode).optional().default(SaveMode.Overwrite),

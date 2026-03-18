@@ -1,7 +1,7 @@
 import { memo, useState, useEffect, useRef } from 'react';
 import { useI18n } from '@/i18n';
 import useCompressionStore from '@/store/compression';
-import { CompressionMode, CompressionOutputMode, CompressionType, ConvertFormat, TinypngMetadata, ResizeMode, ResizeFit } from '@/constants';
+import { CompressionOutputMode, CompressionType, ConvertFormat, TinypngMetadata, ResizeMode, ResizeFit } from '@/constants';
 import { correctFloat } from '@/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +35,6 @@ function CompressionOptionsCard() {
   const t = useI18n();
   const [extraOptionsExpanded, setExtraOptionsExpanded] = useState(false);
   const {
-    compressionMode,
     sizeFilterEnable,
     sizeFilterValue,
     compressionType,
@@ -182,42 +181,6 @@ function CompressionOptionsCard() {
         </CardHeader>
         <CardContent className='space-y-4 pb-5 pt-4'>
             <TabsContent value='auto' className='m-0 space-y-4'>
-              <div className='flex items-center justify-between gap-3'>
-                <div className='flex items-center gap-1.5 shrink-0'>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className='inline-flex cursor-help text-neutral-400 hover:text-neutral-600'>
-                        <HelpCircle className='h-3.5 w-3.5' />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side='top' className='max-w-[280px] whitespace-pre-line text-xs leading-relaxed'>
-                      {t('compression.options.compression_mode.help')}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Label className='text-xs'>{t('compression.options.compression_mode')}</Label>
-                </div>
-                <Select
-                  value={compressionMode}
-                  onValueChange={(v) => updateClassicSettings({ compressionMode: v as CompressionMode })}
-                >
-                  <SelectTrigger
-                    className='h-9 w-[140px] shrink-0 border border-neutral-200 shadow-none text-xs'
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={CompressionMode.Auto} className='text-xs'>
-                      {t('settings.compression.mode.option.auto')}
-                    </SelectItem>
-                    <SelectItem value={CompressionMode.Remote} className='text-xs'>
-                      {t('settings.compression.mode.option.remote')}
-                    </SelectItem>
-                    <SelectItem value={CompressionMode.Local} className='text-xs'>
-                      {t('settings.compression.mode.option.local')}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className='flex items-center justify-between gap-3'>
                 <Label className='shrink-0 text-xs'>{t('compression.options.compression_type')}</Label>
                 <Select

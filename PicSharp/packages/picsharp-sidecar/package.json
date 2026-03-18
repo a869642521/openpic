@@ -14,12 +14,13 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsc && NODE_ENV=production node dist/index.js",
     "build": "tsc",
-    "build-sea:macos-arm64": "tsc && pkg --targets node20-macos-arm64 --compress gzip --output ./bin/picsharp-sidecar-aarch64-apple-darwin .",
-    "build-sea:macos-x64": "tsc && pkg --targets node20-macos-x64 --compress gzip --output ./bin/picsharp-sidecar-x86_64-apple-darwin .",
-    "build-sea:win-x64": "tsc && pkg --targets node20-win-x64 --compress gzip --output ./bin/picsharp-sidecar-x86_64-pc-windows-msvc .",
-    "build-sea:win-arm64": "tsc && pkg --targets node20-win-arm64 --compress gzip --output ./bin/picsharp-sidecar-aarch64-pc-windows-msvc .",
-    "build-sea:linux-x64": "tsc && pkg --targets node20-linux-x64 --no-bytecode --public-packages \"*\" --public --compress gzip --output ./bin/picsharp-sidecar-x86_64-unknown-linux-gnu .",
-    "build-sea:linux-arm64": "tsc && pkg --targets node20-linux-arm64 --no-bytecode --public-packages \"*\" --public --compress gzip --output ./bin/picsharp-sidecar-aarch64-unknown-linux-gnu ."
+    "build:bundle": "node esbuild.config.mjs",
+    "build-sea:macos-arm64": "node esbuild.config.mjs && pkg --targets node20-macos-arm64 --compress gzip --output ./bin/picsharp-sidecar-aarch64-apple-darwin .",
+    "build-sea:macos-x64": "node esbuild.config.mjs && pkg --targets node20-macos-x64 --compress gzip --output ./bin/picsharp-sidecar-x86_64-apple-darwin .",
+    "build-sea:win-x64": "node esbuild.config.mjs && pkg --targets node20-win-x64 --compress gzip --output ./bin/picsharp-sidecar-x86_64-pc-windows-msvc .",
+    "build-sea:win-arm64": "node esbuild.config.mjs && pkg --targets node20-win-arm64 --compress gzip --output ./bin/picsharp-sidecar-aarch64-pc-windows-msvc .",
+    "build-sea:linux-x64": "node esbuild.config.mjs && pkg --targets node20-linux-x64 --no-bytecode --public-packages \"*\" --public --compress gzip --output ./bin/picsharp-sidecar-x86_64-unknown-linux-gnu .",
+    "build-sea:linux-arm64": "node esbuild.config.mjs && pkg --targets node20-linux-arm64 --no-bytecode --public-packages \"*\" --public --compress gzip --output ./bin/picsharp-sidecar-aarch64-unknown-linux-gnu ."
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
@@ -50,6 +51,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/yargs": "^17.0.33",
     "@yao-pkg/pkg": "^6.7.0",
+    "esbuild": "^0.27.4",
     "esbuild-register": "^3.6.0",
     "pino-pretty": "^11.3.0",
     "tsx": "^4.7.1",
@@ -60,13 +62,12 @@
     "assets": [
       "node_modules/@img/**/*",
       "node_modules/@napi-rs/**/*",
-      "./dist/cluster/**/*",
-      "./dist/workers/**/*",
-      "./dist/services/**/*"
+      "node_modules/sharp/**/*",
+      "node_modules/@sentry/**/*",
+      "./dist/dispatcher.js"
     ]
   },
   "engines": {
     "node": ">=20"
   }
 }
-

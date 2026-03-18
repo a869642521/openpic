@@ -515,7 +515,7 @@ export default {
   'page.compression.classic.app_title': 'PicSharp',
   'page.compression.classic.app_description': '简单高效的图片压缩工具',
   'page.compression.classic.upload_title': '图像上传',
-  'page.compression.classic.upload_description': '粘贴、拖放文件或文件夹到此处',
+  'page.compression.classic.upload_description': '🌸希望你压力的永远只是图片，而不是生活',
   'page.compression.classic.upload_file': '选择文件',
   'page.compression.classic.upload_directory': '选择文件夹',
   'page.compression.classic.tinypng_supported_formats': 'TinyPNG支持的图像格式',

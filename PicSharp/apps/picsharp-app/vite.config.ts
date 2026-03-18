@@ -34,12 +34,11 @@ export default defineConfig(async () => ({
     },
   },
   optimizeDeps: {
-    include: ['@sentry/react', '@aptabase/web'],
+    include: ['@sentry/react'],
   },
   define: {
     __PICSHARP_SIDECAR_SENTRY_DSN__: JSON.stringify(process.env.PICSHARP_SIDECAR_SENTRY_DSN ?? ''),
     __PICSHARP_SENTRY_DSN__: JSON.stringify(process.env.PICSHARP_SENTRY_DSN ?? ''),
-    __PICSHARP_ABE_KEY__: JSON.stringify(process.env.PICSHARP_ABE_KEY ?? ''),
     __PICSHARP_ENV__: JSON.stringify(process.env.NODE_ENV ?? ''),
     __PICSHARP_VERSION__: JSON.stringify(packageJson.version),
   },

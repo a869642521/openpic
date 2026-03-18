@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PicSharp",
+  "productName": "Lyam Image",
   "version": "../package.json",
-  "identifier": "com.PicSharp.app",
+  "identifier": "com.lyam.image",
   "build": {
     "beforeDevCommand": "pnpm dev:wait",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,15 @@
   "app": {
     "windows": [
       {
-        "shadow": false
+        "decorations": false,
+        "shadow": true,
+        "resizable": true,
+        "width": 1024,
+        "height": 670,
+        "minWidth": 1024,
+        "minHeight": 670,
+        "center": true,
+        "title": "Lyam Image"
       }
     ],
     "security": {
@@ -32,8 +40,8 @@
     "active": true,
     "targets": "all",
     "category": "Productivity",
-    "copyright": "Copyright (c) AkiraBit 2025. All rights reserved.",
-    "homepage": "https://github.com/AkiraBit/PicSharp",
+    "copyright": "Copyright (c) Lyam 2025. All rights reserved.",
+    "homepage": "",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -49,7 +57,15 @@
     ],
     "windows": {
       "webviewInstallMode": {
-        "type": "embedBootstrapper"
+        "type": "skip"
+      },
+      "nsis": {
+        "headerImage": "./installer/header.bmp",
+        "sidebarImage": "./installer/sidebar.bmp",
+        "installerIcon": "./icons/icon.ico",
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": false
       }
     },
     "macOS": {
@@ -82,7 +98,7 @@
         "role": "Editor"
       }
     ],
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": false
   },
   "plugins": {
     "cli": {
@@ -99,10 +115,6 @@
       "desktop": {
         "schemes": ["picsharp"]
       }
-    },
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU0Nzg5NjY2MDRFOTlCNjQKUldSa20ra0VacFo0VkswUU1WaE45WFFzN3YvYXFZMkQ4c0xVdHZJaVhMNFZmNHd1MHIrUjNQMHgK",
-      "endpoints": ["https://github.com/AkiraBit/PicSharp/releases/latest/download/latest.json"]
     },
     "fs": {
       "requireLiteralLeadingDot": false

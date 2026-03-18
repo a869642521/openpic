@@ -29,6 +29,14 @@
     "prettier-plugin-tailwindcss": "^0.6.8",
     "typescript": "^5"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "@napi-rs/image",
+      "@img/sharp-win32-x64"
+    ]
+  },
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"

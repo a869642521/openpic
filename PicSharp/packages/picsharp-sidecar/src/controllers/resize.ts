@@ -17,7 +17,7 @@ const PayloadSchema = z.object({
       resize_fit: z.nativeEnum(ResizeFit).optional().default(ResizeFit.Inside),
     })
     .optional()
-    .default({}),
+    .default({} as any),
   save: z
     .object({
       mode: z.nativeEnum(SaveMode).optional().default(SaveMode.Overwrite),

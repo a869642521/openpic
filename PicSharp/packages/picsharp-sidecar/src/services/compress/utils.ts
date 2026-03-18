@@ -1,5 +1,5 @@
 import sharp, { Metadata, FormatEnum } from 'sharp';
-import { Dimensions } from '../resize';
+import { Dimensions, ResizeResult } from '../resize';
 import { WatermarkType } from '../../constants';
 import { addTextWatermark, addImageWatermark } from '../watermark';
 import { resizeFromSharpStream } from '../resize';
@@ -17,14 +17,17 @@ export async function applyImageTransformations(
   stream: sharp.Sharp,
   originalMetadata: Dimensions,
   options: any,
-) {
+): Promise<{ dimensions: Dimensions; resizeApplied: boolean }> {
   let dimensions: Dimensions = originalMetadata;
+  let resizeApplied = false;
   if (options.resize_enable) {
-    dimensions = await resizeFromSharpStream({
+    const result: ResizeResult = await resizeFromSharpStream({
       stream,
       originalMetadata: dimensions,
       options,
     });
+    dimensions = { width: result.width, height: result.height };
+    resizeApplied = result.resized;
   }
   if (options.watermark_type !== WatermarkType.None) {
     if (options.watermark_type === WatermarkType.Text && options.watermark_text) {
@@ -47,6 +50,7 @@ export async function applyImageTransformations(
       });
     }
   }
+  return { dimensions, resizeApplied };
 }
 
 export async function applyImageConversion(
@@ -77,6 +81,7 @@ export async function saveImage(
   originalSize: number,
   options: any,
   process_options: any,
+  resizeApplied = false,
 ) {
   // 获取输出路径
   const outputPath = await createOutputPath(inputPath, {
@@ -94,12 +99,11 @@ export async function saveImage(
     .toFile(outputTempPath);
   // 计算压缩率
   const compressionRate = calCompressionRate(originalSize, compressedSize);
-  // 判断是否需要压缩
   const availableCompressRate = compressionRate >= (options.limit_compress_rate || 0);
-  // 如果需要压缩，则重命名临时文件到输出路径
-  if (availableCompressRate) {
+  // 只有 resize 实际发生了尺寸变化时，才无视压缩率强制保存
+  const shouldSave = availableCompressRate || resizeApplied;
+  if (shouldSave) {
     await rename(outputTempPath, outputPath);
-    // 如果不需要压缩，则复制原始文件到输出路径
   } else {
     if (inputPath !== outputPath) {
       await copyFile(inputPath, outputPath);
@@ -107,7 +111,7 @@ export async function saveImage(
     await unlink(outputTempPath);
   }
   return {
-    availableCompressRate,
+    availableCompressRate: shouldSave,
     originalEctypePath,
     compressedSize,
     compressionRate,
@@ -132,7 +136,7 @@ export async function processImage(
     sharp.cache(false);
   }
   if (options.keep_metadata) transformer.keepMetadata();
-  await applyImageTransformations(transformer, originalMetadata, options);
+  const { resizeApplied } = await applyImageTransformations(transformer, originalMetadata, options);
   const outputPath = await createOutputPath(input_path, {
     mode: options.save.mode,
     new_file_suffix: options.save.new_file_suffix,
@@ -146,7 +150,7 @@ export async function processImage(
     options.convert_alpha,
   );
   const { availableCompressRate, originalEctypePath, compressedSize, compressionRate } =
-    await saveImage(transformer, input_path, format, originalSize, options, process_options);
+    await saveImage(transformer, input_path, format, originalSize, options, process_options, resizeApplied);
 
   return {
     input_path,

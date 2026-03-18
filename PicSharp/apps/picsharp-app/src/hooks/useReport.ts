@@ -1,15 +1,8 @@
-import { useAptabase } from '@aptabase/react';
-import { captureError, ReportError } from '@/utils';
+import { report } from '@/utils/report';
 import { useCallback } from 'react';
 
 export const useReport = () => {
-  const { trackEvent } = useAptabase();
-  const r = useCallback((event: string, payload?: Record<string, any>) => {
-    try {
-      trackEvent(event, payload).catch((error) => {
-        captureError(new ReportError(error));
-      });
-    } catch (_) {}
+  return useCallback((event: string, payload?: Record<string, any>) => {
+    report(event, payload as Record<string, unknown>);
   }, []);
-  return r;
 };

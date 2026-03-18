@@ -67,7 +67,6 @@ nanoid = "0.4.0"
 merge = "0.2.0"
 tauri-plugin-shell = "2"
 tauri-plugin-process = "2"
-tauri-plugin-aptabase = "1.0.0"
 dotenvy_macro = "0.15.7"
 
 # sccache 已移除：在 Windows 上可能导致编译卡在 651/654 的已知死锁问题
@@ -108,8 +107,6 @@ objc2 = "0.6.0"
 tauri-plugin-autostart = "2"
 tauri-plugin-cli = "2"
 tauri-plugin-single-instance = "2"
-tauri-plugin-updater = "2"
-
 [[bin]]
 name = "picsharp-cli"
 path = "bin/cli.rs"

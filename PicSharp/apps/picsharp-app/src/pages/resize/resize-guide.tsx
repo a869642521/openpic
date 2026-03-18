@@ -3,7 +3,7 @@ import { UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { parsePaths } from '@/utils/fs';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
-import { Folder, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import useResizeStore from '@/store/resize';
 import { ResizeContext } from '.';
 import { isValidArray } from '@/utils';
@@ -56,17 +56,6 @@ function ResizeGuide() {
     handleFiles(files);
   };
 
-  const handleSelectDirectory = async () => {
-    const directory = await open({
-      multiple: true,
-      directory: true,
-      recursive: true,
-    });
-    if (directory) {
-      handleFiles(Array.isArray(directory) ? directory : [directory]);
-    }
-  };
-
   useEffect(() => {
     const setupDragDrop = async () => {
       dragDropController.current = await getCurrentWebview().onDragDropEvent(async (event) => {
@@ -102,16 +91,16 @@ function ResizeGuide() {
       <div className='relative w-full max-w-5xl'>
         <div className='flex flex-col gap-8 md:flex-row'>
           <div className='flex-1'>
-            <div className='group relative flex flex-col items-center justify-center gap-6 p-8'>
+            <div className='group relative flex flex-col items-center justify-center gap-6 p-5'>
               <div className='text-center'>
                 <div className='flex flex-col items-center justify-center gap-3 sm:flex-row'>
-                  <Button onClick={handleSelectFile} variant='secondary'>
-                    <Upload size={18} />
+                  <Button
+                    onClick={handleSelectFile}
+                    variant='secondary'
+                    className='h-12 w-[220px] rounded-full border border-neutral-300 bg-transparent text-base shadow-none transition-colors hover:bg-black hover:text-white hover:border-black dark:border-neutral-600 dark:bg-transparent dark:hover:bg-black dark:hover:text-white dark:hover:border-black'
+                  >
+                    <Upload size={22} />
                     {t('resize.upload_file')}
-                  </Button>
-                  <Button onClick={handleSelectDirectory} variant='secondary'>
-                    <Folder size={18} />
-                    {t('resize.upload_directory')}
                   </Button>
                 </div>
               </div>

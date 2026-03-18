@@ -1,7 +1,6 @@
 import { destroyAppMenu } from './menu';
 import { destroyTray } from './tray';
 import useAppStore from '@/store/app';
-import { isAptabaseEnabled } from './apm';
 export const validTinifyExts = [
   'png',
   'jpg',

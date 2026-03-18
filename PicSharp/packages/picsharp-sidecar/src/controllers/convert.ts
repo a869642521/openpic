@@ -48,7 +48,7 @@ const PayloadSchema = z.object({
       convert_alpha: z.string().optional().default('#FFFFFF'),
     })
     .optional()
-    .default({}),
+    .default({} as any),
   save: z
     .object({
       mode: z.nativeEnum(SaveMode).optional().default(SaveMode.Overwrite),
