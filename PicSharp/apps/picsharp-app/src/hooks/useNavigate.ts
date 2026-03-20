@@ -50,7 +50,11 @@ export function useNavigate() {
       }
 
       const isSwitchingWithinCompression =
-        nextUrl.startsWith('/compression/classic') || nextUrl.startsWith('/compression/watch');
+        nextUrl.startsWith('/compression/classic') ||
+        nextUrl.startsWith('/compression/watch') ||
+        nextUrl.startsWith('/watermark') ||
+        nextUrl.startsWith('/resize') ||
+        nextUrl.startsWith('/convert');
       if (
         blockCompressionRoutes.includes(location.pathname) &&
         state.working &&

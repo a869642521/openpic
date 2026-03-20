@@ -71,6 +71,12 @@ function CompressionWatch() {
       const compressionMode = folderSettings.compressionMode ?? CompressionMode.Local;
       const compressionLevel = folderSettings.compressionLevel ?? 3;
       const compressionType = folderSettings.compressionType ?? CompressionType.Lossy;
+      const targetSizeEnable = folderSettings.targetSizeEnable ?? false;
+      // 过滤 Tab + 目标大小开启时强制本地有损；关闭时沿用文件夹设置
+      const shouldForceLocal = (folderSettings.sizeFilterEnable ?? false) && targetSizeEnable;
+      const effectiveCompressionMode = shouldForceLocal ? CompressionMode.Local : compressionMode;
+      const effectiveCompressionType = shouldForceLocal ? CompressionType.Lossy : compressionType;
+      const effectiveCompressionLevel = shouldForceLocal ? 1 : compressionLevel;
       const outputMode = folderSettings.compressionOutput ?? CompressionOutputMode.Overwrite;
       const saveAsFileSuffix = folderSettings.saveAsFileSuffix ?? '_min';
       const saveToFolder = folderSettings.saveToFolder ?? '';
@@ -102,9 +108,12 @@ function CompressionWatch() {
       eventEmitter.emit('update_file_item', 'all');
 
       await new Compressor({
-        compressionMode,
-        compressionLevel,
-        compressionType,
+        compressionMode: effectiveCompressionMode,
+        compressionLevel: effectiveCompressionLevel,
+        compressionType: effectiveCompressionType,
+        targetSizeEnable: shouldForceLocal,
+        targetSizeKb: shouldForceLocal ? (folderSettings.sizeFilterValue ?? 500) : undefined,
+        targetSizeTolerance: 0.1,
         tinifyApiKeys: tinypngApiKeys.map((key) => key.api_key),
         save: {
           mode: outputMode,
@@ -295,7 +304,12 @@ function CompressionWatch() {
           isFirstInitRef.current.set(folder.id, false);
           updateWatchFolderStatus(folder.id, 'monitoring');
         } else {
+          // 必须 abort 并抛出，否则 fetchEventSource 会无限重试导致弹窗循环
+          ctrl.abort();
+          updateWatchFolderStatus(folder.id, 'error');
           alert(t('tips.watch_service_startup_failed'));
+          checkAndRegainIfEmpty();
+          throw new Error('SSE connection failed');
         }
       },
       async onmessage(msg) {
@@ -434,6 +448,10 @@ function CompressionWatch() {
         }
       },
       onerror(error) {
+        // 用户主动暂停触发的 AbortError，不视为异常
+        if (ctrl.signal.aborted) {
+          throw error;
+        }
         console.log(`[Watch] SSE error for ${folder.path}`, error);
         captureError(error);
         // 必须中止并抛出，否则 fetch-event-source 会无限重试
@@ -560,9 +578,9 @@ function CompressionWatch() {
   useEffect(() => {
     const { watchFolders } = useCompressionStore.getState();
 
-    // 初始化时为所有已有文件夹建立连接
+    // 初始化时仅对 monitoring 状态的文件夹建立连接（paused 的跳过，等用户手动恢复）
     watchFolders.forEach((folder) => {
-      if (!sseControllersRef.current.has(folder.id)) {
+      if (!sseControllersRef.current.has(folder.id) && folder.status === 'monitoring') {
         startWatching(folder);
         initFolder(folder);
       }
@@ -577,7 +595,7 @@ function CompressionWatch() {
           (nf) => !prevFolders.some((pf) => pf.id === nf.id),
         );
         addedFolders.forEach((folder) => {
-          if (!sseControllersRef.current.has(folder.id)) {
+          if (!sseControllersRef.current.has(folder.id) && folder.status === 'monitoring') {
             startWatching(folder);
             initFolder(folder);
           }
@@ -597,13 +615,16 @@ function CompressionWatch() {
     };
   }, []);
 
-  // 页面可见性恢复检查
+  // 页面可见性恢复检查：仅在「有文件夹但全部异常停止」时提示，paused 属于正常状态不弹报错
   useEffect(() => {
     const handlePageVisible = () => {
       if (document.visibilityState === 'visible') {
         const { watchFolders } = useCompressionStore.getState();
-        const hasActive = watchFolders.some((f) => f.status === 'monitoring');
-        if (!hasActive && watchFolders.length > 0) {
+        const hasMonitoring = watchFolders.some((f) => f.status === 'monitoring');
+        const hasPaused = watchFolders.some((f) => f.status === 'paused');
+        const hasAbnormal = watchFolders.some((f) => f.status === 'stopped' || f.status === 'error');
+        // 只有「全部停止/出错，且没有任何正常状态」才提示中断
+        if (!hasMonitoring && !hasPaused && hasAbnormal) {
           alert(t('tips.file_watch_abort'));
           getCurrentWebviewWindow().show();
           getCurrentWebviewWindow().setFocus();
@@ -726,7 +747,7 @@ function CompressionWatch() {
 
   return (
     <WatchContext.Provider value={{ startWatching, stopWatching }}>
-      <div className='h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900/50'>
+      <div className='h-full overflow-hidden bg-neutral-50 dark:bg-neutral-900/50'>
         <WatchFolderList />
       </div>
     </WatchContext.Provider>

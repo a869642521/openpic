@@ -4,7 +4,6 @@ import Language from './language';
 import Notification from './notification';
 import Section from '../section';
 import Update from './update';
-import Mode from '../compression/mode';
 import { useEffect } from 'react';
 import { useReport } from '@/hooks/useReport';
 import useSettingsStore from '@/store/settings';
@@ -26,7 +25,6 @@ export default function SettingsGeneral() {
       <Card>
         <Language />
         <Notification />
-        <Mode />
         <Autostart />
         <Update />
       </Card>

@@ -14,6 +14,8 @@ export interface ImageViewerProps {
   size: number;
   className?: string;
   imgClassName?: string;
+  /** 对比窗等场景必须看全分辨率，禁用 ≥10MB 时的缩略图逻辑 */
+  fullResolution?: boolean;
 }
 
 export interface ImageViewerRef {
@@ -27,11 +29,12 @@ const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(function ImageV
   props: ImageViewerProps,
   ref,
 ) {
-  const { src, path, ext, className, imgClassName, size } = props;
+  const { src, path, ext, className, imgClassName, size, fullResolution } = props;
   const useThumbnail =
-    !noThumbnailTypes.includes(ext) ||
-    size >= 1024 * 1024 * 10 ||
-    ((ext === 'gif' || ext === 'webp') && size >= 1024 * 1024 * 5);
+    !fullResolution &&
+    (!noThumbnailTypes.includes(ext) ||
+      size >= 1024 * 1024 * 10 ||
+      ((ext === 'gif' || ext === 'webp') && size >= 1024 * 1024 * 5));
   const t = useI18n();
   const imgRef = useRef<HTMLImageElement>(null);
   const [isLoading, setIsLoading] = useState(false);

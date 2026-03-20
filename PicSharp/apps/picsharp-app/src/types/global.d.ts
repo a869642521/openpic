@@ -47,6 +47,7 @@ declare global {
     compressionOutput?: CompressionOutputMode;
     saveAsFileSuffix?: string;
     saveToFolder?: string;
+    targetSizeEnable?: boolean;
   }
 
   interface WatchFolder {
@@ -85,6 +86,7 @@ declare global {
     saveType?: CompressionOutputMode;
     convertResults?: ConvertResult[];
     ssim: number;
+    targetSizeAchieved?: boolean;
   }
 }
 

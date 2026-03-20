@@ -87,6 +87,8 @@ export default function ImageCompare() {
                   ext={file?.ext}
                   size={file?.bytesSize}
                   className='h-full w-full'
+                  fullResolution
+                  imgClassName='h-full w-full'
                 />
                 // <ReactCompareSliderImage
                 //   src={file?.originalTempPath}
@@ -105,6 +107,8 @@ export default function ImageCompare() {
                   ext={file?.ext}
                   size={file?.compressedBytesSize}
                   className='h-full w-full'
+                  fullResolution
+                  imgClassName='h-full w-full'
                 />
                 // <ReactCompareSliderImage
                 //   src={file?.assetPath}

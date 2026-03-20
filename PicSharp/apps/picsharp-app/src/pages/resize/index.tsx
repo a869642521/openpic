@@ -1,24 +1,12 @@
-import { useRef, createContext } from 'react';
-import { Outlet } from 'react-router';
-import { PageProgress, PageProgressRef } from '@/components/fullscreen-progress';
-import { useI18n } from '@/i18n';
+import { Hammer } from 'lucide-react';
 
-export const ResizeContext = createContext<{
-  progressRef: React.RefObject<PageProgressRef>;
-}>({
-  progressRef: null,
-});
+export const ResizeContext = { progressRef: null } as any;
 
 export default function Resize() {
-  const progressRef = useRef<PageProgressRef>(null);
-  const t = useI18n();
-
   return (
-    <ResizeContext.Provider value={{ progressRef }}>
-      <div className='relative h-full overflow-auto'>
-        <PageProgress ref={progressRef} description={t('tips.import_files')} />
-        <Outlet />
-      </div>
-    </ResizeContext.Provider>
+    <div className='flex h-full flex-col items-center justify-center gap-3 text-neutral-400 dark:text-neutral-500'>
+      <Hammer className='h-8 w-8' />
+      <p className='text-sm'>功能正在开发中...</p>
+    </div>
   );
 }

@@ -13,6 +13,7 @@ function sendDebugLog(
   message: string,
   data: Record<string, unknown>,
 ) {
+  if (process.env.NODE_ENV === 'production') return;
   fetch('http://127.0.0.1:7318/ingest/75a54541-45a0-44fe-af7e-5197dacb917b', {
     method: 'POST',
     headers: {

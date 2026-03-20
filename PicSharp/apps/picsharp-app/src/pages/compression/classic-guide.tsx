@@ -4,7 +4,7 @@ import { isFunction } from 'radash';
 import { open } from '@tauri-apps/plugin-dialog';
 import { parsePaths } from '../../utils/fs';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
-import { Upload } from 'lucide-react';
+import { Upload, FolderOpen } from 'lucide-react';
 import useCompressionStore from '../../store/compression';
 import { CompressionContext } from '.';
 import { isValidArray, sleep } from '@/utils';
@@ -61,6 +61,14 @@ function ClassicCompressionGuide() {
       ],
     });
     handleFiles(files);
+  };
+
+  const handleSelectFolder = async () => {
+    const dirs = await open({
+      multiple: true,
+      directory: true,
+    });
+    handleFiles(Array.isArray(dirs) ? dirs : dirs ? [dirs] : []);
   };
 
   useEffect(() => {
@@ -155,19 +163,28 @@ function ClassicCompressionGuide() {
       <div className='relative w-full max-w-5xl'>
         <div className='flex flex-col gap-8 md:flex-row'>
           <div className='flex-1'>
-            <div className='group relative flex flex-col items-center justify-center gap-6 p-5'>
-              <div className='text-center'>
-                <div className='flex flex-col items-center justify-center gap-3 sm:flex-row'>
-                  <Button
-                    onClick={handleSelectFile}
-                    variant='secondary'
-                    className='h-12 w-[220px] rounded-full border border-neutral-300 bg-transparent text-base shadow-none transition-colors hover:bg-black hover:text-white hover:border-black dark:border-neutral-600 dark:bg-transparent dark:hover:bg-black dark:hover:text-white dark:hover:border-black'
-                  >
-                    <Upload size={22} />
-                    {t('page.compression.classic.upload_file')}
-                  </Button>
-                </div>
+            <div className='group relative flex flex-col items-center justify-center gap-4 p-5'>
+              <div className='flex flex-col items-center gap-3 sm:flex-row'>
+                <Button
+                  onClick={handleSelectFile}
+                  variant='secondary'
+                  className='h-12 w-[220px] rounded-full border border-neutral-300 bg-transparent text-base shadow-none transition-colors hover:bg-black hover:text-white hover:border-black dark:border-neutral-600 dark:bg-transparent dark:hover:bg-black dark:hover:text-white dark:hover:border-black'
+                >
+                  <Upload size={22} />
+                  {t('page.compression.classic.upload_file')}
+                </Button>
+                <Button
+                  onClick={handleSelectFolder}
+                  variant='secondary'
+                  className='h-12 w-[220px] rounded-full border border-neutral-300 bg-transparent text-base shadow-none transition-colors hover:bg-black hover:text-white hover:border-black dark:border-neutral-600 dark:bg-transparent dark:hover:bg-black dark:hover:text-white dark:hover:border-black'
+                >
+                  <FolderOpen size={22} />
+                  {t('page.compression.classic.upload_folder')}
+                </Button>
               </div>
+              <p className='text-xs text-neutral-400 dark:text-neutral-500'>
+                {t('page.compression.classic.paste_hint')}
+              </p>
             </div>
           </div>
         </div>

@@ -17,6 +17,9 @@ export namespace ICompressor {
     concurrency?: number;
     compressionMode?: CompressionMode;
     limitCompressRate?: number;
+    targetSizeEnable?: boolean;
+    targetSizeKb?: number;
+    targetSizeTolerance?: number;
     tinifyApiKeys?: string[];
     compressionLevel?: number;
     compressionType?: CompressionType;
@@ -82,6 +85,9 @@ export namespace ICompressor {
 
   export interface CompressPayloadOptions {
     limit_compress_rate: number;
+    target_size_enable?: boolean;
+    target_size_kb?: number;
+    target_size_tolerance?: number;
     save: {
       mode: CompressionOutputMode;
       new_file_suffix: string;
@@ -517,11 +523,19 @@ export default class Compressor {
     });
   };
 
+  /** 目标大小仅本地有损管线支持；Auto 下若先走 TinyPNG 则永远不会应用 target_size */
+  private get shouldUseLocalForTargetSize() {
+    return Boolean(this.options.targetSizeEnable && this.options.targetSizeKb);
+  }
+
   private createTasks = (files: FileInfo[]) => {
     switch (this.options.compressionMode) {
       case CompressionMode.Auto: {
         return files.map((file) => () => {
-          if (VALID_TINYPNG_IMAGE_EXTS.includes(file.ext)) {
+          if (
+            !this.shouldUseLocalForTargetSize &&
+            VALID_TINYPNG_IMAGE_EXTS.includes(file.ext)
+          ) {
             return this.tinify(file).catch(() => this.selectHandler(file));
           } else {
             return this.selectHandler(file);
@@ -529,15 +543,17 @@ export default class Compressor {
         });
       }
       case CompressionMode.Remote: {
-        return files.map(
-          (file) => () =>
-            this.tinify(file).catch((error: string) => {
-              return Promise.reject({
-                input_path: file.path,
-                error: error.toString(),
-              });
-            }),
-        );
+        return files.map((file) => () => {
+          if (this.shouldUseLocalForTargetSize) {
+            return this.selectHandler(file);
+          }
+          return this.tinify(file).catch((error: string) => {
+            return Promise.reject({
+              input_path: file.path,
+              error: error.toString(),
+            });
+          });
+        });
       }
       default: {
         return files.map((file) => () => this.selectHandler(file));
@@ -578,6 +594,9 @@ export default class Compressor {
           options: Object.assign(
             {
               limit_compress_rate: this.options.limitCompressRate,
+              target_size_enable: this.options.targetSizeEnable,
+              target_size_kb: this.options.targetSizeKb,
+              target_size_tolerance: this.options.targetSizeTolerance,
               save: {
                 mode: this.options.save.mode,
                 new_file_suffix: this.options.save.newFileSuffix,
@@ -627,7 +646,11 @@ export default class Compressor {
   };
 
   png = async (file: FileInfo) => {
-    if (this.options.compressionType === CompressionType.Lossless) {
+    // 无损 PNG 不走 pngquant，sidecar 不会应用 target_size；开启目标大小时必须走有损分支
+    const useLossless =
+      this.options.compressionType === CompressionType.Lossless &&
+      !this.shouldUseLocalForTargetSize;
+    if (useLossless) {
       return this.process('png/lossless', {
         input_path: file.path,
         process_options: {
@@ -636,34 +659,39 @@ export default class Compressor {
           lossless: true,
         },
       });
-    } else {
-      return this.process('png', {
-        input_path: file.path,
-        process_options: {
-          ...PNG_COMPRESSION_LEVEL_PRESET[this.options.compressionLevel],
-          force: true,
-        },
-      });
     }
+    return this.process('png', {
+      input_path: file.path,
+      process_options: {
+        ...PNG_COMPRESSION_LEVEL_PRESET[this.options.compressionLevel],
+        force: true,
+      },
+    });
   };
 
   webp = async (file: FileInfo) => {
+    const lossless =
+      this.options.compressionType === CompressionType.Lossless &&
+      !this.shouldUseLocalForTargetSize;
     return this.process('webp', {
       input_path: file.path,
       process_options: {
         ...WEBP_COMPRESSION_LEVEL_PRESET[this.options.compressionLevel],
         force: true,
-        lossless: this.options.compressionType === CompressionType.Lossless,
+        lossless,
       },
     });
   };
 
   avif = async (file: FileInfo) => {
+    const lossless =
+      this.options.compressionType === CompressionType.Lossless &&
+      !this.shouldUseLocalForTargetSize;
     return this.process('avif', {
       input_path: file.path,
       process_options: {
         ...AVIF_COMPRESSION_LEVEL_PRESET[this.options.compressionLevel],
-        lossless: this.options.compressionType === CompressionType.Lossless,
+        lossless,
       },
     });
   };

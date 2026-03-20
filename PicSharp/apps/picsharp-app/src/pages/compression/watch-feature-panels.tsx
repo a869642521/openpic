@@ -24,6 +24,7 @@ import {
 } from '@/constants';
 import { open } from '@tauri-apps/plugin-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 import { HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CheckboxGroup } from '@/components/checkbox-group';
@@ -223,6 +224,8 @@ export const CompressionPanel = memo(function CompressionPanel({
   const skipModeSyncRef = useRef(false);
   const skipSaveSyncRef = useRef(false);
   const skipMetadataSyncRef = useRef(false);
+  // 标记是否已经进入过 filter Tab（用于避免重复覆盖用户手动关闭的设置）
+  const filterTabVisitedRef = useRef(s.sizeFilterEnable ?? false);
 
   const [filterInput, setFilterInput] = useState(String(s.sizeFilterValue ?? 500));
   const [modeTab, setModeTab] = useState<'auto' | 'filter'>(() =>
@@ -298,7 +301,13 @@ export const CompressionPanel = memo(function CompressionPanel({
             if (next === modeTab) return;
             skipModeSyncRef.current = true;
             setModeTab(next);
-            onChange({ sizeFilterEnable: next === 'filter' });
+            const isFilter = next === 'filter';
+            onChange({ sizeFilterEnable: isFilter });
+            // 只在首次进入 filter Tab 时默认开启目标大小，不覆盖用户手动关闭的设置
+            if (isFilter && !filterTabVisitedRef.current) {
+              onChange({ targetSizeEnable: true });
+              filterTabVisitedRef.current = true;
+            }
           }}
         >
           <TabsList className='flex h-8 w-[120px] shrink-0 rounded-full p-0'>
@@ -369,17 +378,27 @@ export const CompressionPanel = memo(function CompressionPanel({
             </Tooltip>
             <span className={LABEL_CLASS}>{t('compression.options.size_filter.label')}</span>
           </Label>
-          <div className='flex h-8 w-[300px] items-center gap-1 rounded-md border px-2 text-xs' style={{ borderColor: 'rgb(219,219,220)' }}>
-            <Input
-              type='number'
-              min={1}
-              value={filterInput}
-              placeholder='500'
-              onChange={(e) => setFilterInput(e.target.value)}
-              onBlur={handleFilterBlur}
-              className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
-            />
-            <span className='shrink-0 text-neutral-400'>KB</span>
+          <div className='flex shrink-0 items-center gap-3'>
+            <div className='flex h-8 w-[140px] items-center gap-1 rounded-md border px-2 text-xs' style={{ borderColor: 'rgb(219,219,220)' }}>
+              <Input
+                type='number'
+                min={1}
+                value={filterInput}
+                placeholder='500'
+                onChange={(e) => setFilterInput(e.target.value)}
+                onBlur={handleFilterBlur}
+                className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
+              />
+              <span className='shrink-0 text-neutral-400'>KB</span>
+            </div>
+            <div className='flex items-center gap-2'>
+              <span className={LABEL_CLASS}>{t('compression.options.target_size.label')}</span>
+              <Switch
+                checked={s.targetSizeEnable ?? false}
+                onCheckedChange={(checked) => onChange({ targetSizeEnable: checked })}
+                className='data-[state=checked]:bg-neutral-800 data-[state=unchecked]:bg-neutral-200'
+              />
+            </div>
           </div>
         </div>
       )}

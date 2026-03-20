@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import EventEmitter from 'eventemitter3';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import useAppStore from './app';
@@ -14,6 +15,9 @@ export interface ClassicSettings {
   compressionLevel: number;
   sizeFilterEnable: boolean;
   sizeFilterValue: number;
+  targetSizeEnable: boolean;
+  targetSizeValue: number;
+  targetSizeTolerance: number;
   outputMode: CompressionOutputMode;
   saveAsFileSuffix: string;
   saveToFolder: string;
@@ -42,6 +46,9 @@ export const defaultClassicSettings: ClassicSettings = {
   compressionLevel: 3,
   sizeFilterEnable: false,
   sizeFilterValue: 500,
+  targetSizeEnable: false,
+  targetSizeValue: 500,
+  targetSizeTolerance: 0.1,
   outputMode: CompressionOutputMode.Overwrite,
   saveAsFileSuffix: '_min',
   saveToFolder: '',
@@ -92,6 +99,7 @@ export const defaultWatchFolderSettings: WatchFolderSettings = {
   compressionOutput: CompressionOutputMode.Overwrite,
   saveAsFileSuffix: '_min',
   saveToFolder: '',
+  targetSizeEnable: false,
 };
 
 interface CompressionState {
@@ -159,7 +167,9 @@ function syncViewFromMode(state: Partial<CompressionState>, mode: CompressionMod
   };
 }
 
-const useCompressionStore = create<CompressionState & CompressionAction>((set, get) => ({
+const useCompressionStore = create<CompressionState & CompressionAction>()(
+  persist(
+    (set, get) => ({
   mode: 'classic',
   working: false,
   eventEmitter: new EventEmitter(),
@@ -485,6 +495,20 @@ const useCompressionStore = create<CompressionState & CompressionAction>((set, g
       selectedFiles: [],
     });
   },
-}));
+    }),
+    {
+      name: 'picsharp-compression',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ watchFolders: state.watchFolders }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.watchFolders) {
+          state.watchFolders = state.watchFolders.map((f: WatchFolder) =>
+            f.status === 'monitoring' ? { ...f, status: 'paused' as WatchFolder['status'] } : f,
+          );
+        }
+      },
+    },
+  ),
+);
 
 export default useCompressionStore;

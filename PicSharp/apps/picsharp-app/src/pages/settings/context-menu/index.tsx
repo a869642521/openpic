@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@/i18n';
 import useSettingsStore from '@/store/settings';
 import useSelector from '@/hooks/useSelector';
-import { SettingsKey, CompressionType } from '@/constants';
+import { SettingsKey, CompressionMode } from '@/constants';
 import { isWindows } from '@/utils';
 import Section from '../section';
 import SettingItem from '../setting-item';
@@ -17,8 +17,14 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import Type from '../compression/type';
-import Level from '../compression/level';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 function FeatureCard({
   icon,
@@ -48,8 +54,9 @@ function FeatureCard({
 
 function CompressFeatureCard({ t }: { t: ReturnType<typeof useI18n> }) {
   const [expanded, setExpanded] = useState(false);
-  const compressionType = useSettingsStore((s) => s[SettingsKey.CompressionType]);
-  const isLossy = compressionType === CompressionType.Lossy;
+  const { compression_mode: compressionMode, set } = useSettingsStore(
+    useSelector([SettingsKey.CompressionMode, 'set']),
+  );
   return (
     <div className='rounded-lg border border-neutral-200/80 bg-neutral-50/50 dark:border-neutral-700/40 dark:bg-neutral-800/30'>
       <button
@@ -74,9 +81,24 @@ function CompressFeatureCard({ t }: { t: ReturnType<typeof useI18n> }) {
       </button>
       {expanded && (
         <div className='border-t border-neutral-200/80 px-4 pb-4 pt-3 dark:border-neutral-700/40'>
-          <div className='space-y-4'>
-            <Type />
-            {isLossy && <Level />}
+          <div className='flex items-center justify-between gap-3'>
+            <Label className='shrink-0 text-xs'>{t('settings.compression.mode.title')}</Label>
+            <Select value={compressionMode} onValueChange={(v) => set(SettingsKey.CompressionMode, v)}>
+              <SelectTrigger className='h-8 w-[160px] text-xs'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={CompressionMode.Local} className='text-xs'>
+                  本地压缩（无损）
+                </SelectItem>
+                <SelectItem value={CompressionMode.Remote} className='text-xs'>
+                  {t('settings.compression.mode.option.remote')}
+                </SelectItem>
+                <SelectItem value={CompressionMode.Auto} className='text-xs'>
+                  {t('settings.compression.mode.option.auto')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}

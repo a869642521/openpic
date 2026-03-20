@@ -4,7 +4,7 @@ import { Sparkles, LoaderPinwheel } from 'lucide-react';
 import useAppStore from '@/store/app';
 import useCompressionStore from '@/store/compression';
 import useSelector from '@/hooks/useSelector';
-import { SettingsKey, CompressionMode, CompressionOutputMode, ResizeMode } from '@/constants';
+import { SettingsKey, CompressionMode, CompressionOutputMode, CompressionType, ResizeMode } from '@/constants';
 import { isValidArray, correctFloat, calProgress } from '@/utils';
 import Compressor from '@/utils/compressor';
 import { humanSize } from '@/utils/fs';
@@ -49,6 +49,9 @@ function ToolbarCompress() {
     convertEnable,
     compressionType,
     compressionLevel,
+    targetSizeEnable,
+    targetSizeValue,
+    targetSizeTolerance,
     convertTypes,
     convertAlpha,
     resizeDimensions,
@@ -131,7 +134,11 @@ function ToolbarCompress() {
       }
 
       setInCompressing(true);
-      const sizeFilterBytes = sizeFilterEnable ? sizeFilterValue * 1024 : 0;
+      // 取过滤阈值与目标大小的最大值：两者均不应压缩已满足条件的图片
+      const skipBelowBytes = Math.max(
+        sizeFilterEnable ? sizeFilterValue * 1024 : 0,
+        targetSizeEnable && targetSizeValue > 0 ? targetSizeValue * 1024 : 0,
+      );
       const seenPaths = new Set<string>();
       const files = selectedFiles
         .map<FileInfo>((id) => {
@@ -145,7 +152,7 @@ function ToolbarCompress() {
           ) {
             if (seenPaths.has(file.path)) return null;
             seenPaths.add(file.path);
-            if (sizeFilterBytes > 0 && file.bytesSize < sizeFilterBytes) {
+            if (skipBelowBytes > 0 && file.bytesSize < skipBelowBytes) {
               file.status = ICompressor.Status.Skipped;
               eventEmitter.emit('update_file_item', file.path);
               return null;
@@ -166,10 +173,18 @@ function ToolbarCompress() {
       }
 
       eventEmitter.emit('update_file_item', 'all');
+      // 仅在目标大小开启时才强制走本地有损；关闭时沿用用户全局设置
+      const shouldForceLocal = sizeFilterEnable && targetSizeEnable;
+      const effectiveCompressionMode = shouldForceLocal ? CompressionMode.Local : compressionMode;
+      const effectiveCompressionType = shouldForceLocal ? CompressionType.Lossy : compressionType;
+      const effectiveCompressionLevel = shouldForceLocal ? 1 : compressionLevel;
       await new Compressor({
-        compressionMode,
-        compressionLevel,
-        compressionType,
+        compressionMode: effectiveCompressionMode,
+        compressionLevel: effectiveCompressionLevel,
+        compressionType: effectiveCompressionType,
+        targetSizeEnable,
+        targetSizeKb: targetSizeEnable ? targetSizeValue : undefined,
+        targetSizeTolerance,
         tinifyApiKeys: tinypngApiKeys.map((key) => key.api_key),
         save: {
           mode: outputMode,
@@ -220,6 +235,9 @@ function ToolbarCompress() {
             targetFile.saveType = outputMode;
             if (isValidArray(res.convert_results)) {
               targetFile.convertResults = res.convert_results;
+            }
+            if (typeof res.target_size_achieved === 'boolean') {
+              targetFile.targetSizeAchieved = res.target_size_achieved;
             }
           } else {
             rejected++;

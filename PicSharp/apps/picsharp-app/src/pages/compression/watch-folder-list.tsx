@@ -24,7 +24,7 @@ import { CompressionMode, CompressionOutputMode, SettingsKey } from '@/constants
 import message from '@/components/message';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { open } from '@tauri-apps/plugin-dialog';
-import { exists } from '@tauri-apps/plugin-fs';
+import { exists, stat } from '@tauri-apps/plugin-fs';
 import { isValidArray, preventDefault } from '@/utils';
 import useAppStore from '@/store/app';
 import { openSettingsWindow } from '@/utils/window';
@@ -34,6 +34,9 @@ import WatchFolderSettingsDialog from './watch-folder-settings-dialog';
 import FileCard from './file-card';
 import { ICompressor } from '@/utils/compressor';
 import ToolbarPagination from './toolbar-pagination';
+import { getCurrentWebview } from '@tauri-apps/api/webview';
+import { UnlistenFn } from '@tauri-apps/api/event';
+import FolderIcon from '@/components/animated-icon/folder';
 
 /** 嵌入在卡片内的文件网格 */
 const FolderFileGrid = memo(function FolderFileGrid({ folderId }: { folderId: string }) {
@@ -271,15 +274,22 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
     useSelector(['removeWatchFolder', 'updateWatchFolderStatus']),
   );
   const { startWatching, stopWatching } = useContext(WatchContext);
+  const { messageApi } = useContext(AppContext);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<FeatureSection | undefined>(undefined);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const handleToggleMonitor = () => {
     if (folder.status === 'monitoring') {
       stopWatching(folder.id);
       updateWatchFolderStatus(folder.id, 'paused');
     } else if (folder.status === 'paused') {
+      const { sidecar } = useAppStore.getState();
+      if (!sidecar?.origin) {
+        messageApi?.error(t('tips.file_watch_not_running'));
+        return;
+      }
+      updateWatchFolderStatus(folder.id, 'monitoring');
       startWatching(folder);
     }
   };
@@ -460,7 +470,7 @@ const FolderCard = memo(function FolderCard({ folder }: { folder: WatchFolder })
   );
 });
 
-/** 监听文件夹列表（卡片集合 + 添加按钮） */
+/** 监听文件夹列表（卡片集合 + 添加按钮 + 空状态 + 拖拽） */
 function WatchFolderList() {
   const t = useI18n();
   const { watchFolders, setWorking, addWatchFolder, pendingWatchPath, setPendingWatchPath } = useCompressionStore(
@@ -470,6 +480,8 @@ function WatchFolderList() {
 
   const [addModeDialogOpen, setAddModeDialogOpen] = useState(false);
   const pendingPathRef = useRef<string | null>(null);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
+  const dragDropController = useRef<UnlistenFn | null>(null);
 
   useEffect(() => {
     if (pendingWatchPath) {
@@ -478,6 +490,36 @@ function WatchFolderList() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingWatchPath]);
+
+  // 拖拽支持
+  useEffect(() => {
+    const setup = async () => {
+      dragDropController.current = await getCurrentWebview().onDragDropEvent(async (event) => {
+        if (!dropzoneRef.current) return;
+        if (event.payload.type === 'enter') {
+          dropzoneRef.current.classList.add('drag-active');
+        } else if (event.payload.type === 'leave') {
+          dropzoneRef.current.classList.remove('drag-active');
+        } else if (event.payload.type === 'drop') {
+          dropzoneRef.current.classList.remove('drag-active');
+          const path = event.payload.paths[0];
+          if (path) {
+            const isDir = (await stat(path)).isDirectory;
+            if (isDir) {
+              handleAddFolder(path);
+            } else {
+              messageApi?.error(t('tips.path_not_dir', { path }));
+            }
+          }
+        }
+      });
+    };
+    setup();
+    return () => {
+      dragDropController.current?.();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddFolder = async (path?: string) => {
     const { sidecar } = useAppStore.getState();
@@ -557,24 +599,46 @@ function WatchFolderList() {
   };
 
   return (
-    <div className='flex h-full flex-col gap-3 overflow-y-auto p-4'>
-      {watchFolders.map((folder) => (
-        <FolderCard key={folder.id} folder={folder} />
-      ))}
+    <div ref={dropzoneRef} className='flex h-full flex-col overflow-y-auto' style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
+      {watchFolders.length === 0 ? (
+        /* 空状态 */
+        <div className='flex flex-1 flex-col items-center justify-center gap-4 p-8'>
+          <div className='cursor-pointer' onClick={() => handleAddFolder()}>
+            <FolderIcon />
+          </div>
+          <p className='text-base font-medium text-neutral-700 dark:text-neutral-300'>
+            {t('page.compression.watch.guide.empty_title')}
+          </p>
+          <p className='max-w-sm text-center text-sm text-neutral-400 dark:text-neutral-500'>
+            {t('page.compression.watch.guide.empty_description')}
+          </p>
+          <Button variant='default' size='lg' className='cursor-pointer mt-2' onClick={() => handleAddFolder()}>
+            <Plus size={18} />
+            {t('page.compression.watch.guide.add_folder')}
+          </Button>
+        </div>
+      ) : (
+        /* 文件夹列表 */
+        <div className='flex flex-col gap-3 p-4'>
+          {watchFolders.map((folder) => (
+            <FolderCard key={folder.id} folder={folder} />
+          ))}
 
-      {/* 添加更多文件夹按钮 */}
-      <button
-        type='button'
-        onClick={() => handleAddFolder()}
-        className={cn(
-          'flex items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm',
-          'border-neutral-200 bg-neutral-100 text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-600',
-          'dark:border-neutral-600 dark:bg-neutral-800/60 dark:text-neutral-500 dark:hover:border-neutral-500 dark:hover:text-neutral-300',
-        )}
-      >
-        <Plus className='h-4 w-4' />
-        {t('page.compression.watch.folder.add')}
-      </button>
+          {/* 添加更多文件夹按钮 */}
+          <button
+            type='button'
+            onClick={() => handleAddFolder()}
+            className={cn(
+              'flex items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm',
+              'border-neutral-200 bg-neutral-100 text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-600',
+              'dark:border-neutral-600 dark:bg-neutral-800/60 dark:text-neutral-500 dark:hover:border-neutral-500 dark:hover:text-neutral-300',
+            )}
+          >
+            <Plus className='h-4 w-4' />
+            {t('page.compression.watch.folder.add')}
+          </button>
+        </div>
+      )}
 
       <WatchAddModeDialog
         open={addModeDialogOpen}

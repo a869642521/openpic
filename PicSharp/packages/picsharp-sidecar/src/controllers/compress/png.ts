@@ -18,6 +18,9 @@ const app = new Hono();
 const OptionsSchema = z
   .object({
     limit_compress_rate: z.number().min(0).max(1).optional(),
+    target_size_enable: z.boolean().optional().default(false),
+    target_size_kb: z.number().min(1).optional(),
+    target_size_tolerance: z.number().min(0).max(1).optional().default(0.1),
     save: z
       .object({
         mode: z.nativeEnum(SaveMode).optional().default(SaveMode.Overwrite),
@@ -118,3 +121,4 @@ app.post('/lossless', zValidator('json', LosslessPayloadSchema), async (context)
 });
 
 export default app;
+

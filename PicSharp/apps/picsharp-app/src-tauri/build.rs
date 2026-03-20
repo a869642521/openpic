@@ -41,6 +41,28 @@ fn main() {
         let workspace_root = manifest_dir.ancestors().nth(3).unwrap();
         let sidecar_pkg = workspace_root.join("packages").join("picsharp-sidecar");
 
+        // 前置检查：确保 pnpm install 已执行，sharp 原生包可用
+        let sharp_check = Command::new("node")
+            .args(&[
+                "-e",
+                "try { require.resolve('@img/sharp-win32-x64/package', { paths: [process.cwd()] }); process.exit(0); } catch (e) { console.error('Sharp runtime not found. Run: pnpm install (at monorepo root)'); process.exit(1); }",
+            ])
+            .current_dir(&sidecar_pkg)
+            .output();
+        if let Ok(out) = sharp_check {
+            if !out.status.success() && is_release {
+                eprintln!("{}", String::from_utf8_lossy(&out.stderr));
+                panic!(
+                    "Sharp runtime package @img/sharp-win32-x64 not found. Please run 'pnpm install' at monorepo root ({}), then rebuild.",
+                    workspace_root.display()
+                );
+            }
+        } else if is_release {
+            panic!("Failed to run node for sharp check. Ensure Node.js and pnpm install are available.");
+        }
+
+        println!("cargo:rerun-if-changed={}", manifest_dir.join("icons").join("icon.ico").display());
+        println!("cargo:rerun-if-changed={}", manifest_dir.join("icons").join("icon.png").display());
         println!("cargo:rerun-if-changed={}", sidecar_pkg.join("src").display());
         println!("cargo:rerun-if-changed={}", sidecar_pkg.join("package.json").display());
         println!(

@@ -540,6 +540,11 @@ function FileCard(props: FileCardProps) {
                   ? `-${file.compressRate}`
                   : `+${file.compressRate}`}
               </span>
+              {file.targetSizeAchieved === false && (
+                <Tooltip title={t('compression.options.target_size.not_achieved')} arrow={false}>
+                  <span className='cursor-default text-[10px] text-amber-500'>⚠</span>
+                </Tooltip>
+              )}
             </div>
           ) : (
             <StatusBadge status={file.status} errorMessage={file.errorMessage} />

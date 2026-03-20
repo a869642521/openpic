@@ -1,7 +1,7 @@
 import { memo, useState, useEffect, useRef } from 'react';
 import { useI18n } from '@/i18n';
 import useCompressionStore from '@/store/compression';
-import { CompressionOutputMode, CompressionType, ConvertFormat, TinypngMetadata, ResizeMode, ResizeFit } from '@/constants';
+import { CompressionMode, CompressionOutputMode, CompressionType, ConvertFormat, TinypngMetadata, ResizeMode, ResizeFit } from '@/constants';
 import { correctFloat } from '@/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +37,8 @@ function CompressionOptionsCard() {
   const {
     sizeFilterEnable,
     sizeFilterValue,
+    targetSizeEnable,
+    compressionMode,
     compressionType,
     compressionLevel,
     outputMode,
@@ -69,6 +71,8 @@ function CompressionOptionsCard() {
   const [widthInput, setWidthInput] = useState(() => String(resizeDimensions?.[0] ?? 0));
   const [heightInput, setHeightInput] = useState(() => String(resizeDimensions?.[1] ?? 0));
   const skipModeSyncRef = useRef(false);
+  // 标记是否已经进入过 filter Tab（用于避免重复覆盖用户手动设置）
+  const filterTabVisitedRef = useRef(sizeFilterEnable);
   const skipSaveSyncRef = useRef(false);
   const skipMetadataSyncRef = useRef(false);
   const skipConvertSyncRef = useRef(false);
@@ -163,7 +167,12 @@ function CompressionOptionsCard() {
             skipModeSyncRef.current = true;
             setModeTab(next);
             const isFilter = next === 'filter';
-            updateClassicSettings({ sizeFilterEnable: isFilter });
+            updateClassicSettings({
+              sizeFilterEnable: isFilter,
+              // 只在首次进入 filter Tab 时默认开启目标大小，不覆盖用户手动关闭的设置
+              ...(isFilter && !filterTabVisitedRef.current ? { targetSizeEnable: true } : {}),
+            });
+            if (isFilter) filterTabVisitedRef.current = true;
           }}
         >
           <CardHeader
@@ -182,48 +191,31 @@ function CompressionOptionsCard() {
         <CardContent className='space-y-4 pb-5 pt-4'>
             <TabsContent value='auto' className='m-0 space-y-4'>
               <div className='flex items-center justify-between gap-3'>
-                <Label className='shrink-0 text-xs'>{t('compression.options.compression_type')}</Label>
+                <Label className='shrink-0 text-xs'>{t('settings.compression.mode.title')}</Label>
                 <Select
-                  value={compressionType}
-                  onValueChange={(v) => updateClassicSettings({ compressionType: v as CompressionType })}
+                  value={compressionMode === CompressionMode.Auto ? CompressionMode.Remote : compressionMode}
+                  onValueChange={(v) => {
+                    const mode = v as CompressionMode;
+                    updateClassicSettings({
+                      compressionMode: mode,
+                      // 切换到本地时强制无损
+                      ...(mode === CompressionMode.Local ? { compressionType: CompressionType.Lossless } : {}),
+                    });
+                  }}
                 >
-                  <SelectTrigger
-                    className='h-9 w-[140px] shrink-0 border border-neutral-200 shadow-none text-xs'
-                  >
+                  <SelectTrigger className='h-9 w-[140px] shrink-0 border border-neutral-200 shadow-none text-xs'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={CompressionType.Lossless} className='text-xs'>
-                      {t('settings.compression.type.option.lossless')}
+                    <SelectItem value={CompressionMode.Local} className='text-xs'>
+                      本地压缩（无损）
                     </SelectItem>
-                    <SelectItem value={CompressionType.Lossy} className='text-xs'>
-                      {t('settings.compression.type.option.lossy')}
+                    <SelectItem value={CompressionMode.Remote} className='text-xs'>
+                      {t('settings.compression.mode.option.remote')}
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {compressionType === CompressionType.Lossy && (
-                <div className='flex items-center justify-between gap-3'>
-                  <Label className='shrink-0 text-xs'>{t('settings.compression.level.title')}</Label>
-                  <Select
-                    value={String(compressionLevel)}
-                    onValueChange={(v) => updateClassicSettings({ compressionLevel: Number(v) })}
-                  >
-                  <SelectTrigger
-                    className='h-9 w-[140px] shrink-0 border border-neutral-200 shadow-none text-xs'
-                  >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <SelectItem key={n} value={String(n)} className='text-xs'>
-                          {t(`settings.compression.level.option.${n}` as any)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </TabsContent>
             <TabsContent value='filter' className='m-0 space-y-4'>
               <div className='flex items-center justify-between gap-3'>
@@ -251,12 +243,25 @@ function CompressionOptionsCard() {
                       const num = Number(filterInput);
                       const valid = Number.isFinite(num) && num >= 1;
                       const final = valid ? Math.floor(num) : 500;
-                      updateClassicSettings({ sizeFilterValue: final });
+                      // 同步更新 targetSizeValue，使目标大小始终与过滤值保持一致
+                      updateClassicSettings({ sizeFilterValue: final, targetSizeValue: final });
                       setFilterInput(String(final));
                     }}
                     className='h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0'
                   />
                   <span className='shrink-0 text-xs text-neutral-500'>KB</span>
+                </div>
+              </div>
+              <div className='rounded-xl border border-neutral-200/80 bg-neutral-50/80 px-3 py-3'>
+                <div className='flex items-center justify-between gap-3'>
+                  <Label className='flex min-w-0 items-center gap-1 text-xs'>
+                    {t('compression.options.target_size.label')}
+                  </Label>
+                  <Switch
+                    checked={targetSizeEnable}
+                    onCheckedChange={(checked) => updateClassicSettings({ targetSizeEnable: checked })}
+                    className='data-[state=checked]:bg-neutral-800 data-[state=unchecked]:bg-neutral-200'
+                  />
                 </div>
               </div>
             </TabsContent>

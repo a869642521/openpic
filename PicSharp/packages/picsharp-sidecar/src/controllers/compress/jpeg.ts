@@ -16,6 +16,9 @@ const app = new Hono();
 const OptionsSchema = z
   .object({
     limit_compress_rate: z.number().min(0).max(1).optional(),
+    target_size_enable: z.boolean().optional().default(false),
+    target_size_kb: z.number().min(1).optional(),
+    target_size_tolerance: z.number().min(0).max(1).optional().default(0.1),
     save: z
       .object({
         mode: z.nativeEnum(SaveMode).optional().default(SaveMode.Overwrite),
@@ -50,25 +53,25 @@ const OptionsSchema = z
 
 const ProcessOptionsSchema = z
   .object({
-    // 质量，整�?-100
+    // 质量，整�?-100
     quality: z.number().min(0).max(100).optional().default(80),
-    // 是否使用渐进式（交错）扫�?    progressive: z.boolean().optional().default(false),
-    // 色度子采样，设置�?4:4:4'以防止色度子采样，默认为'4:2:0'
+    // 是否使用渐进式（交错）扫�?    progressive: z.boolean().optional().default(false),
+    // 色度子采样，设置�?4:4:4'以防止色度子采样，默认为'4:2:0'
     chromaSubsampling: z.string().optional().default('4:2:0'),
     // 优化霍夫曼编码表
     optimiseCoding: z.boolean().optional().default(true),
-    // 优化编码的替代拼�?    optimizeCoding: z.boolean().optional().default(true),
-    // 使用mozjpeg默认�?    mozjpeg: z.boolean().optional().default(false),
+    // 优化编码的替代拼�?    optimizeCoding: z.boolean().optional().default(true),
+    // 使用mozjpeg默认�?    mozjpeg: z.boolean().optional().default(false),
     // 应用网格量化
     trellisQuantisation: z.boolean().optional().default(false),
-    // 应用过冲去振�?    overshootDeringing: z.boolean().optional().default(false),
-    // 优化渐进式扫�?    optimiseScans: z.boolean().optional().default(false),
-    // 优化扫描的替代拼�?    optimizeScans: z.boolean().optional().default(false),
+    // 应用过冲去振�?    overshootDeringing: z.boolean().optional().default(false),
+    // 优化渐进式扫�?    optimiseScans: z.boolean().optional().default(false),
+    // 优化扫描的替代拼�?    optimizeScans: z.boolean().optional().default(false),
     // 量化表，整数0-8
     quantisationTable: z.number().optional(),
     // 量化表的替代拼写
     quantizationTable: z.number().optional(),
-    // 强制JPEG输出，即使输入图像的alpha通道被使�?    force: z.boolean().optional().default(true),
+    // 强制JPEG输出，即使输入图像的alpha通道被使�?    force: z.boolean().optional().default(true),
   })
   .optional()
   .default({});
@@ -94,3 +97,4 @@ app.post('/', zValidator('json', PayloadSchema, payloadValidator), async (contex
 });
 
 export default app;
+
