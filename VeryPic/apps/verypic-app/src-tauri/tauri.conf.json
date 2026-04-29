@@ -1,0 +1,123 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VeryPic",
+  "version": "../package.json",
+  "identifier": "com.lyam.image",
+  "build": {
+    "beforeDevCommand": "pnpm dev:wait",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "decorations": false,
+        "shadow": true,
+        "resizable": true,
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 670,
+        "center": true,
+        "title": "VeryPic"
+      }
+    ],
+    "security": {
+      "dangerousDisableAssetCspModification": true,
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": [
+            "**"
+          ],
+          "requireLiteralLeadingDot": false
+        }
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "copyright": "Copyright (c) VeryPic 2025. All rights reserved.",
+    "homepage": "",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/**/*"
+    ],
+    "externalBin": [
+      "binaries/verypic-sidecar"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "skip"
+      },
+      "nsis": {
+        "headerImage": "./installer/header.bmp",
+        "sidebarImage": "./installer/sidebar.bmp",
+        "installerIcon": "./icons/icon.ico",
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": false
+      }
+    },
+    "macOS": {
+      "entitlements": "./Entitlements.plist",
+      "minimumSystemVersion": "12.0"
+    },
+    "linux": {
+      "deb": {
+        "section": "text"
+      }
+    },
+    "fileAssociations": [
+      {
+        "name": "image",
+        "ext": [
+          "png",
+          "jpg",
+          "jpeg",
+          "webp",
+          "avif",
+          "gif",
+          "svg",
+          "tiff",
+          "tif",
+          "heic",
+          "heif"
+        ],
+        "description": "Image file",
+        "mimeType": "image/*",
+        "role": "Editor"
+      }
+    ],
+    "createUpdaterArtifacts": false
+  },
+  "plugins": {
+    "cli": {
+      "description": "VeryPic CLI",
+      "args": [
+        {
+          "name": "file",
+          "index": 1,
+          "takesValue": true
+        }
+      ]
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["verypic"]
+      }
+    },
+    "fs": {
+      "requireLiteralLeadingDot": false
+    }
+  }
+}

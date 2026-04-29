@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="color-scheme" content="light">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/x-icon" href="public/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VeryPic</title>
+  <style>
+    html,
+    body,
+    #root{
+      height: 100%;
+      overflow: hidden;
+    }
+    html.dark {
+      background-color: rgb(25, 25, 25)!important;
+    }
+    html.light {
+      background: white!important;
+    }
+
+  </style>
+  <script>
+    function getOSByUA() {
+      const ua = navigator.userAgent.toLowerCase()
+      if (ua.includes("mac os x")) {
+        return "mac"
+      } else if (ua.includes("linux")) {
+        return "linux"
+      } else if (ua.includes("windows")) {
+        return "windows"
+      }
+      return "unknown"
+    }
+    const root = window.document.documentElement;
+    const stored = localStorage.getItem('app-theme');
+    root.classList.add(stored === 'dark' ? 'dark' : 'light');
+    if(getOSByUA() === 'linux'){
+      root.style.border = '2px solid #333333';
+    }
+    // const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    // const currentTheme = localStorage.getItem('app-theme') || 'system';
+    // if(currentTheme === 'system') {
+    //   root.classList.add(mediaQuery.matches ? 'dark' : 'light');
+    // }else{
+    //   root.classList.add(currentTheme);
+    // }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  <!-- <script crossOrigin="anonymous" src="//unpkg.com/react-scan/dist/auto.global.js"></script> -->
+</body>
+
+</html>

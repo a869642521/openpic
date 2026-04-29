@@ -1,0 +1,6 @@
+/bin
+
+# Flattened native deps for Windows/Tauri packaging (`pnpm build-node:win-x64` / copy-native-deps.mjs)
+/native_modules/
+
+.env*

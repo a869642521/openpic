@@ -1,0 +1,73 @@
+{
+  "name": "@verypic/picsharp-sidecar",
+  "version": "2.2.7",
+  "description": "VeryPic Sidecar",
+  "author": "AkiraBit",
+  "license": "AGPL-3.0",
+  "repository": "AkiraBit/PicSharp",
+  "homepage": "https://github.com/AkiraBit/PicSharp",
+  "bugs": {
+    "url": "https://github.com/AkiraBit/PicSharp/issues"
+  },
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsc && NODE_ENV=production node dist/index.js",
+    "build": "tsc",
+    "build:bundle": "node esbuild.config.mjs",
+    "build-sea:macos-arm64": "node esbuild.config.mjs && pkg --targets node20-macos-arm64 --compress gzip --output ./bin/verypic-sidecar-aarch64-apple-darwin .",
+    "build-sea:macos-x64": "node esbuild.config.mjs && pkg --targets node20-macos-x64 --compress gzip --output ./bin/verypic-sidecar-x86_64-apple-darwin .",
+    "build-node:win-x64": "node esbuild.config.mjs && node scripts/copy-native-deps.mjs native_modules",
+    "build-sea:win-x64": "node esbuild.config.mjs && pkg --targets node20-win-x64 --compress gzip --output ./bin/verypic-sidecar-x86_64-pc-windows-msvc .",
+    "build-sea:win-arm64": "node esbuild.config.mjs && pkg --targets node20-win-arm64 --compress gzip --output ./bin/verypic-sidecar-aarch64-pc-windows-msvc .",
+    "build-sea:linux-x64": "node esbuild.config.mjs && pkg --targets node20-linux-x64 --no-bytecode --public-packages \"*\" --public --compress gzip --output ./bin/verypic-sidecar-x86_64-unknown-linux-gnu .",
+    "build-sea:linux-arm64": "node esbuild.config.mjs && pkg --targets node20-linux-arm64 --no-bytecode --public-packages \"*\" --public --compress gzip --output ./bin/verypic-sidecar-aarch64-unknown-linux-gnu ."
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "@hono/zod-validator": "^0.4.3",
+    "@napi-rs/image": "^1.11.2",
+    "@sentry/node": "^10.11.0",
+    "dirspy": "^1.0.3",
+    "dotenv": "^17.2.2",
+    "es-toolkit": "^1.39.10",
+    "fs-extra": "^11.3.0",
+    "hono": "^4.7.7",
+    "mime": "^4.0.7",
+    "nanoid": "^3.3.11",
+    "node-addon-api": "^8.5.0",
+    "node-gyp": "^11.3.0",
+    "node-machine-id": "^1.1.12",
+    "pino": "^9.7.0",
+    "radash": "^12.1.1",
+    "readdirp": "^4.1.2",
+    "sharp": "0.34.4",
+    "ssim.js": "^3.5.0",
+    "svgo": "^3.3.2",
+    "undici": "^7.8.0",
+    "yargs": "^17.7.2",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/yargs": "^17.0.33",
+    "@yao-pkg/pkg": "^6.7.0",
+    "esbuild": "^0.27.4",
+    "esbuild-register": "^3.6.0",
+    "pino-pretty": "^11.3.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5"
+  },
+  "bin": "dist/index.js",
+  "pkg": {
+    "assets": [
+      "node_modules/@napi-rs/**/*",
+      "node_modules/sharp/**/*",
+      "node_modules/@sentry/**/*",
+      "./dist/dispatcher.js"
+    ]
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

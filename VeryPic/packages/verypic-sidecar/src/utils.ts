@@ -1,0 +1,303 @@
+import fse from 'fs-extra';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { nanoid } from 'nanoid';
+import getPort, { portNumbers } from './get-port';
+import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import ssim from 'ssim.js';
+import sharp, { Metadata } from 'sharp';
+import { omit } from 'es-toolkit';
+import os from 'node:os';
+import Sentry from '@sentry/node';
+import type { ZodError } from 'zod';
+
+/** 压缩率 (0~1)，不在此处四舍五入：原先 toFixed(2) 会把不足 0.5% 的收益变成 0，PNG 等小幅优化在 UI 上误显示 0% */
+export const calCompressionRate = (originalSize: number, compressedSize: number) => {
+  if (!originalSize || originalSize <= 0) return 0;
+  return (originalSize - compressedSize) / originalSize;
+};
+
+export const isFile = async (path: string) => {
+  return (await fs.stat(path)).isFile();
+};
+
+export function isValidArray(arr: unknown) {
+  return Array.isArray(arr) && arr.length > 0;
+}
+
+export const isDirectory = async (path: string) => {
+  if (!path || String(path).trim() === '') return false;
+  return (await fs.stat(path)).isDirectory();
+};
+
+export const isExists = async (path: string) => {
+  return await fse.pathExists(path);
+};
+
+export const checkFile = async (path: string) => {
+  if (!(await isExists(path))) {
+    throw new Error(`Path '${path}' does not exist`);
+  } else if (!(await isFile(path))) {
+    throw new Error(`File '${path}' is not a file`);
+  }
+};
+
+export const getFileSize = async (path: string) => {
+  const stats = await fs.stat(path);
+  return stats.size;
+};
+
+export const convertFileSrc = (path: string) => {
+  if (!path) return '';
+  const base = 'asset://localhost/';
+  const encoded = encodeURIComponent(path);
+  return `${base}${encoded}`;
+};
+
+export const createTempFilePath = (targetPath: string, tempDir: string = os.tmpdir()) => {
+  return path.join(
+    tempDir,
+    `${path.basename(targetPath, path.extname(targetPath))}_${nanoid()}${path.extname(targetPath)}`,
+  );
+};
+
+export const copyFileToTemp = async (targetPath: string, tempDir: string = os.tmpdir()) => {
+  const tempFilePath = createTempFilePath(targetPath, tempDir);
+  await fs.copyFile(targetPath, tempFilePath);
+  return tempFilePath;
+};
+
+export const createOutputPath = async (
+  inputPath: string,
+  options: {
+    mode: 'overwrite' | 'save_as_new_file' | 'save_to_new_folder';
+    new_file_suffix?: string;
+    new_folder_path?: string;
+  },
+) => {
+  const mode = options.mode || 'overwrite';
+  switch (mode) {
+    case 'overwrite':
+      return inputPath;
+    case 'save_as_new_file': {
+      const fileExt = path.extname(inputPath);
+      const filename = path.basename(inputPath, fileExt);
+      return path.join(path.dirname(inputPath), `${filename}${options.new_file_suffix || '_compressed'}${fileExt}`);
+    }
+    case 'save_to_new_folder': {
+      const folder = options.new_folder_path?.trim();
+      if (!folder) {
+        throw new Error('Save to folder mode requires new_folder_path to be set');
+      }
+      if (!(await isDirectory(folder))) {
+        throw new Error(`Directory '${folder}' does not exist`);
+      }
+      const fileExt = path.extname(inputPath);
+      const baseName = path.basename(inputPath, fileExt);
+      const filename = path.basename(inputPath);
+      const candidate = path.join(folder, filename);
+      // 若目标路径已存在文件（同目录源文件、或输出目录下已有同名文件），加后缀避免覆盖
+      let targetExists = false;
+      try {
+        const st = await fs.stat(candidate);
+        targetExists = st.isFile();
+      } catch {
+        // 文件不存在，可安全使用 candidate
+      }
+      if (targetExists) {
+        return path.join(folder, `${baseName}${options.new_file_suffix || '_compressed'}${fileExt}`);
+      }
+      return candidate;
+    }
+    default:
+      throw new Error(`Unknown save mode: ${mode}`);
+  }
+};
+
+export async function findAvailablePort(preferredPort?: number): Promise<number> {
+  return getPort({ port: preferredPort || portNumbers(1024, 49151) });
+}
+
+export interface RetryOptions {
+  enable?: boolean;
+  retryCount?: number;
+  retryInterval?: number;
+}
+
+/**
+ * 带简易指数退避算法的重试Promise
+ * @param promiseFunc
+ * @param retryOptions
+ */
+export function retryPromise<T>(
+  promiseFunc: () => Promise<T>,
+  retryOptions?: RetryOptions,
+): Promise<T> {
+  if (typeof promiseFunc !== 'function') {
+    throw new TypeError('[retryPromise]: Argument 1 must be a function that returns a promise!');
+  }
+  return new Promise<T>((resolve, reject) => {
+    const { enable = true, retryInterval, retryCount } = retryOptions || {};
+    let attempt = 0;
+    const retry = () => {
+      Promise.resolve(promiseFunc())
+        .then(resolve)
+        .catch((error) => {
+          if (enable) {
+            if (typeof retryCount === 'number' && typeof retryInterval === 'number') {
+              if (++attempt < retryCount) {
+                setTimeout(() => retry(), retryInterval);
+              } else {
+                reject(error);
+              }
+            } else {
+              if (++attempt < (retryCount || 3)) {
+                const interval = Math.min(1000 * 2 ** ++attempt, 30 * 1000);
+                setTimeout(() => retry(), interval);
+              } else {
+                reject(error);
+              }
+            }
+          } else {
+            reject(error);
+          }
+        });
+    };
+    retry();
+  });
+}
+
+export const isWindows = process.platform === 'win32';
+export const isMac = process.platform === 'darwin';
+export const isLinux = process.platform === 'linux';
+
+export const getFileExtWithoutDot = (inputPath: string) => path.extname(inputPath).slice(1);
+
+export function createExtOutputPath(inputPath: string, ext: string) {
+  return path.join(
+    path.dirname(inputPath),
+    `${path.basename(inputPath, path.extname(inputPath))}.${ext}`,
+  );
+}
+
+export function isBigInt(value: unknown): value is BigInt {
+  return typeof value === 'bigint';
+}
+
+export function jsonBigInt(key: string, value: unknown): unknown {
+  if (isBigInt(value)) {
+    return value.toString();
+  }
+  return value;
+}
+
+export function hashFile(filePath: string, algorithm = 'md5', highWaterMark = 1024 * 1024) {
+  return new Promise<string>((resolve, reject) => {
+    const hash = createHash(algorithm);
+    const stream = createReadStream(filePath, { highWaterMark });
+    stream.on('error', reject);
+    hash.on('error', reject);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
+}
+
+export async function getImageRawData(path: string) {
+  const instance = sharp(path, { limitInputPixels: false });
+  const buffer = await instance.ensureAlpha().raw().toBuffer();
+  const metadata = await instance.metadata();
+  return {
+    data: new Uint8ClampedArray(buffer),
+    width: metadata.width,
+    height: metadata.height,
+  };
+}
+
+export async function calculateSSIM(original: string, compressed: string) {
+  const originalData = await getImageRawData(original);
+  const compressedData = await getImageRawData(compressed);
+  const { mssim } = ssim(
+    {
+      width: originalData.width,
+      height: originalData.height,
+      data: originalData.data,
+    },
+    {
+      width: compressedData.width,
+      height: compressedData.height,
+      data: compressedData.data,
+    },
+  );
+  return mssim;
+}
+
+export const isBuilt = __dirname.includes('dist');
+export const isDev = process.env.NODE_ENV !== 'production' && !isBuilt;
+
+/**
+ * Convert px to Pango size (for <span size="..."> in Pango Markup).
+ * Formula: size = px * 768
+ */
+export function pxToPangoSize(px: number): number {
+  return Math.round(px * 768);
+}
+
+/**
+ * Convert Pango size back to px.
+ * Formula: px = size / 768
+ */
+export function pangoSizeToPx(size: number): number {
+  return Math.round(size / 768);
+}
+
+export function getPlainMetadata(metadata?: Metadata) {
+  return metadata
+    ? omit<Metadata, keyof Metadata>(metadata, [
+        'exif',
+        'icc',
+        'iptc',
+        'xmp',
+        'tifftagPhotoshop',
+        'autoOrient',
+      ])
+    : undefined;
+}
+
+interface CompressErrorOptions {
+  cause: unknown;
+  payload?: Record<string, any>;
+}
+
+export class CompressError extends Error {
+  payload?: Record<string, any>;
+  constructor(message: string, options: CompressErrorOptions) {
+    super(`${message} ${options.cause instanceof Error ? `: ${options.cause.message}` : ''}`, {
+      cause: options.cause,
+    });
+
+    this.name = 'CompressError';
+    this.payload = options.payload;
+  }
+}
+
+export function createOutputPathTempPath(inputPath: string) {
+  const dir = path.dirname(inputPath);
+  const base = path.basename(inputPath);
+  const tempPath = path.join(dir, `.${nanoid()}_${base}`);
+  return tempPath;
+}
+
+export function captureError(error: Error, payload?: Record<string, any>, tag?: string) {
+  try {
+    Sentry.withScope((scope) => {
+      if (payload) {
+        scope.setContext('Error Payload', payload);
+      }
+      if (tag) {
+        scope.setTag('tag', tag);
+      }
+      scope.captureException(error);
+    });
+  } catch (_) {}
+}

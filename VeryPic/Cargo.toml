@@ -1,0 +1,15 @@
+[workspace]
+members = [
+  "apps/verypic-app/src-tauri",
+  "apps/verypic-shell-command",
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["JaylenLee117"]
+license = "AGPL-3.0"
+homepage = "https://github.com/AkiraBit/PicSharp"
+repository = "https://github.com/AkiraBit/PicSharp"
+categories = []
+edition = "2021"
+rust-version = "1.82.0"

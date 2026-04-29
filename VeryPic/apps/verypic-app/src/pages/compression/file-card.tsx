@@ -1,0 +1,632 @@
+import { memo, useEffect, useRef, useContext, useState } from 'react';
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
+import useCompressionStore from '@/store/compression';
+import useSelector from '@/hooks/useSelector';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { useI18n } from '@/i18n';
+import { useUpdate } from 'ahooks';
+import { copyFile, exists, rename } from '@tauri-apps/plugin-fs';
+import { dirname, join } from '@tauri-apps/api/path';
+import { getOSPlatform, isValidArray } from '@/utils';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { RefreshCw, Columns2, FolderOpen, Undo2 } from 'lucide-react';
+import { calImageWindowSize, spawnWindow, createWebviewWindow } from '@/utils/window';
+import { WebviewWindow, getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { getCurrentWebview } from '@tauri-apps/api/webview';
+import { ICompressor } from '@/utils/compressor';
+import { undoSave } from '@/utils/fs';
+import { save } from '@tauri-apps/plugin-dialog';
+import { Divider, Tooltip } from 'antd';
+import { AppContext } from '@/routes';
+import {
+  ContextMenu,
+  ImperativeContextMenuNode,
+  ImperativeContextMenuItem,
+} from '@/components/context-menu';
+import ImageViewer, { ImageViewerRef } from '@/components/image-viewer';
+import useAppStore from '@/store/app';
+import { copyImage } from '@/utils/clipboard';
+import ImgTag from '@/components/img-tag';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+export interface FileCardProps {
+  path: FileInfo['path'];
+}
+
+function FileCard(props: FileCardProps) {
+  const { path } = props;
+  const update = useUpdate();
+  const t = useI18n();
+  const { eventEmitter, fileMap } = useCompressionStore(useSelector(['eventEmitter', 'fileMap']));
+  const file = fileMap.get(path);
+  const imgRef = useRef<ImageViewerRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const { messageApi } = useContext(AppContext);
+  const { sidecar } = useAppStore(useSelector(['sidecar']));
+
+  const handleRevealFile = async (event: React.MouseEvent<HTMLDivElement>) => {
+    const src = event.currentTarget.dataset.src;
+    if (src && (await exists(src))) {
+      revealItemInDir(src);
+    } else {
+      messageApi?.error(t('tips.file_not_exists'));
+    }
+  };
+
+  const handleSaveAs = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const srcPath = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    if (!(await exists(srcPath))) {
+      messageApi?.error(t('tips.file_not_exists'));
+      return;
+    }
+    const ext = file.ext?.toLowerCase() || 'png';
+    const selectedPath = await save({
+      defaultPath: file.name,
+      filters: [{ name: ext, extensions: [ext] }],
+    });
+    if (selectedPath) {
+      try {
+        await copyFile(srcPath, selectedPath);
+        messageApi?.success(t('saved'));
+      } catch (err) {
+        messageApi?.error(t('export_failed'));
+      }
+    }
+  };
+
+  const handleRevealInDir = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const srcPath = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    if (await exists(srcPath)) {
+      revealItemInDir(srcPath);
+    } else {
+      messageApi?.error(t('tips.file_not_exists'));
+    }
+  };
+
+  const handleCompare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (!imgRef.current) return;
+      const dimensions = imgRef.current.getDimensions();
+      if (!dimensions) return;
+      const [width, height] = calImageWindowSize(dimensions.width, dimensions.height);
+      const label = `verypic_compare_${file.id}`;
+      const targetWindow = await WebviewWindow.getByLabel(label);
+      if (targetWindow) {
+        targetWindow.show();
+        targetWindow.setFocus();
+      } else {
+        const win = await createWebviewWindow(label, {
+          url: '/image-compare',
+          title: file.name,
+          width,
+          height,
+          minWidth: 460,
+          minHeight: 460,
+        });
+        win.once('loaded', () => {
+          win.emitTo(label, 'compare_file', { file });
+        });
+      }
+    } catch (err) {
+      console.error('image compare error', err);
+    }
+  };
+
+  const handleUndo = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { success, message: undoMessage } = await undoSave(file);
+    if (success) {
+      file.status = ICompressor.Status.Undone;
+      file.compressRate = '';
+      file.compressedBytesSize = 0;
+      file.compressedDiskSize = 0;
+      file.formattedCompressedBytesSize = '';
+      file.assetPath = convertFileSrc(file.path);
+      file.outputPath = '';
+      file.originalTempPath = '';
+      file.originalTempPathConverted = '';
+      file.saveType = null;
+      update();
+      messageApi?.success(t(undoMessage as any));
+    } else {
+      messageApi?.error(t(undoMessage as any));
+    }
+  };
+
+  const handleImageClick = async () => {
+    const filePath = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    if (await exists(filePath)) {
+      openPath(filePath);
+    } else {
+      messageApi?.error(t('tips.file_not_exists'));
+    }
+  };
+
+  const handleTitleClick = () => {
+    setEditName(file.name);
+    setIsEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleRenameSave = async () => {
+    if (!editName.trim() || editName === file.name) {
+      setIsEditing(false);
+      return;
+    }
+    const srcPath =
+      file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+    const dir = await dirname(srcPath);
+    const newPath = await join(dir, editName.trim());
+    try {
+      await rename(srcPath, newPath);
+      useCompressionStore.getState().updateFilePath(path, newPath, editName.trim());
+      useCompressionStore.getState().eventEmitter.emit('update_file_item', 'all');
+      messageApi?.success(t('saved'));
+    } catch (err) {
+      messageApi?.error(t('export_failed'));
+    }
+    setIsEditing(false);
+  };
+
+  const fileContextMenuHandler = async (event: React.MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    const FILE_REVEAL_LABELS = {
+      macos: t('compression.file_action.reveal_in_finder'),
+      windows: t('compression.file_action.reveal_in_exploer'),
+      linux: t('compression.file_action.reveal_in_exploer'),
+      default: t('compression.file_action.reveal_in_exploer'),
+    };
+    const osPlatform = getOSPlatform();
+    const fileRevealLabel = FILE_REVEAL_LABELS[osPlatform] || FILE_REVEAL_LABELS.default;
+    const menuItems: ImperativeContextMenuNode[] = [];
+    const compareMenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: t('compression.file_action.compare_file'),
+      onClick: async () => {
+        try {
+          if (imgRef.current) {
+            const dimensions = imgRef.current.getDimensions();
+            if (!dimensions) return;
+            const [width, height] = calImageWindowSize(dimensions.width, dimensions.height);
+            const label = `verypic_compare_${file.id}`;
+
+            const targetWindow = await WebviewWindow.getByLabel(label);
+            if (targetWindow) {
+              targetWindow.show();
+              targetWindow.setFocus();
+            } else {
+              const window = await createWebviewWindow(label, {
+                url: '/image-compare',
+                title: file.name,
+                width,
+                height,
+                minWidth: 460,
+                minHeight: 460,
+              });
+              window.once('loaded', () => {
+                window.emitTo(label, 'compare_file', {
+                  file,
+                });
+              });
+              // spawnWindow(
+              //   {
+              //     mode: 'compress:compare',
+              //     file,
+              //   },
+              //   {
+              //     label,
+              //     title: t('compression.file_action.compare_file', { name: file.name }),
+              //     width,
+              //     height,
+              //     resizable: false,
+              //     hiddenTitle: true,
+              //   },
+              // );
+            }
+          }
+        } catch (err) {
+          console.error('image compare error', err);
+        }
+      },
+    };
+    const openFileMenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: t('compression.file_action.open_file'),
+      onClick: async () => {
+        let path = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+        if (await exists(path)) {
+          openPath(path);
+        } else {
+          messageApi?.error(t('tips.file_not_exists'));
+        }
+      },
+    };
+    const revealMenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: fileRevealLabel,
+      onClick: async () => {
+        let path = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+        if (await exists(path)) {
+          revealItemInDir(path);
+        } else {
+          messageApi?.error(t('tips.file_not_exists'));
+        }
+      },
+    };
+    const copyPathMenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: t('compression.file_action.copy_path'),
+      onClick: async () => {
+        let path = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+        await writeText(path);
+        messageApi?.success(t('tips.file_path_copied'));
+      },
+    };
+    const copyFileMenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: t('compression.file_action.copy_file'),
+      onClick: async () => {
+        try {
+          if (!sidecar?.origin) {
+            throw new Error('Sidecar not ready');
+          }
+          let path = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+          const { status, message } = await copyImage(path, sidecar?.origin);
+          if (status === 'success') {
+            messageApi?.success(t('tips.file_copied'));
+          } else {
+            throw new Error(message);
+          }
+        } catch (error) {
+          messageApi?.error(t('tips.file_copy_failed'));
+        }
+      },
+    };
+    const copyAsMarkdownMenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: t('compression.file_action.copy_as_markdown'),
+      onClick: async () => {
+        let path = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+        await writeText(`![${file.name}](${path})`);
+        messageApi?.success(t('tips.markdown_code_copied'));
+      },
+    };
+
+    const copyAsBase64MenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: t('compression.file_action.copy_as_base64'),
+      onClick: async () => {
+        let path = file.status === ICompressor.Status.Completed ? file.outputPath : file.path;
+        if (sidecar?.origin) {
+          try {
+            messageApi?.loading(t('tips.copying'));
+            const response = await fetch(`${sidecar?.origin}/api/codec/base64`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ input_path: path }),
+            });
+            const data = await response.json();
+            await writeText(data.data);
+            messageApi?.destroy();
+            messageApi?.success(t('tips.copied_success'));
+          } catch (error) {
+            messageApi?.error(t('tips.copied_failed'));
+          }
+        } else {
+          messageApi?.error(t('tips.copied_failed'));
+        }
+      },
+    };
+    const undoMenuItem: ImperativeContextMenuItem = {
+      type: 'item',
+      name: t('compression.file_action.undo'),
+      onClick: async () => {
+        const { success, message: undoMessage } = await undoSave(file);
+        if (success) {
+          file.status = ICompressor.Status.Undone;
+          file.compressRate = '';
+          file.compressedBytesSize = 0;
+          file.compressedDiskSize = 0;
+          file.formattedCompressedBytesSize = '';
+          file.assetPath = convertFileSrc(file.path);
+          file.outputPath = '';
+          file.originalTempPath = '';
+          file.originalTempPathConverted = '';
+          file.saveType = null;
+          update();
+          messageApi?.success(t(undoMessage as any));
+        } else {
+          messageApi?.error(t(undoMessage as any));
+        }
+      },
+    };
+
+    if (
+      file.status === ICompressor.Status.Completed &&
+      file.outputPath &&
+      file.originalTempPath &&
+      file.originalTempPathConverted &&
+      imgRef.current
+    ) {
+      menuItems.push(compareMenuItem);
+      menuItems.push({
+        type: 'separator',
+      });
+    }
+    if (
+      file.status === ICompressor.Status.Completed &&
+      file.outputPath &&
+      file.originalTempPath &&
+      file.originalTempPathConverted
+    ) {
+      menuItems.push(undoMenuItem);
+      menuItems.push({
+        type: 'separator',
+      });
+    }
+    menuItems.push(openFileMenuItem);
+    menuItems.push(revealMenuItem);
+    menuItems.push({
+      type: 'separator',
+    });
+    menuItems.push({
+      type: 'item',
+      name: t('compression.file_action.copy'),
+      children: [copyPathMenuItem, copyFileMenuItem, copyAsMarkdownMenuItem, copyAsBase64MenuItem],
+    });
+    ContextMenu.open({
+      x: event.clientX,
+      y: event.clientY,
+      items: menuItems,
+    });
+  };
+
+  useEffect(() => {
+    const updateFn = (signal: FileInfo['path'] | 'all') => {
+      if (signal === path || signal === 'all') {
+        update();
+      }
+    };
+    eventEmitter.on('update_file_item', updateFn);
+    return () => {
+      eventEmitter.off('update_file_item', updateFn);
+    };
+  }, [path]);
+
+  if (!file) return null;
+
+  return (
+    <div
+      className='group relative min-w-0 rounded-lg transition-shadow hover:shadow-md'
+      style={{ backgroundColor: 'rgb(252, 252, 252)', border: '1px solid rgb(219, 219, 220)' }}
+    >
+      <div
+        className='overflow-hidden rounded-lg transition-all duration-300'
+      >
+        <div
+          className='text-0 relative flex aspect-[4/3] cursor-pointer items-center justify-center overflow-hidden'
+          style={{ backgroundColor: 'rgb(255, 255, 255)' }}
+          onClick={handleImageClick}
+        >
+          <div className='absolute left-2 top-2 z-10 flex items-start'>
+            <ImgTag type={file.ext} />
+          </div>
+          <div className='absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100'>
+            <Tooltip title={t('compression.file_action.compare_file')}>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
+                onClick={handleCompare}
+                disabled={
+                  file.status !== ICompressor.Status.Completed ||
+                  !file.outputPath ||
+                  !file.originalTempPath
+                }
+              >
+                <Columns2 className='h-4 w-4' />
+              </Button>
+            </Tooltip>
+            <Tooltip
+              title={
+                getOSPlatform() === 'macos'
+                  ? t('compression.file_action.reveal_in_finder')
+                  : t('compression.file_action.reveal_in_exploer')
+              }
+            >
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
+                onClick={handleRevealInDir}
+              >
+                <FolderOpen className='h-4 w-4' />
+              </Button>
+            </Tooltip>
+            <Tooltip title={t('compression.file_action.undo')}>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6 rounded-lg bg-[rgb(236,237,238)] hover:!bg-black hover:!text-white dark:group-hover:bg-neutral-600/70'
+                onClick={handleUndo}
+                disabled={
+                  file.status !== ICompressor.Status.Completed ||
+                  !file.outputPath ||
+                  !file.originalTempPath
+                }
+              >
+                <Undo2 className='h-4 w-4' />
+              </Button>
+            </Tooltip>
+          </div>
+          <ImageViewer
+            src={file.assetPath}
+            size={
+              file.status === ICompressor.Status.Completed ? file.compressedBytesSize : file.bytesSize
+            }
+            path={file.status === ICompressor.Status.Completed ? file.outputPath : file.path}
+            ext={file.ext}
+            ref={imgRef}
+            imgClassName='aspect-[4/3] rounded-lg'
+          />
+        </div>
+        <div className='p-2' style={{ backgroundColor: 'rgb(252, 252, 252)' }}>
+        {isEditing ? (
+          <Input
+            ref={inputRef}
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={handleRenameSave}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameSave();
+              if (e.key === 'Escape') {
+                setEditName(file.name);
+                setIsEditing(false);
+              }
+            }}
+            className='h-6 px-2 text-[12px]'
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <Tooltip title={`${file.path}\n${t('compression.file_action.rename')}`} arrow={false}>
+            <div
+              className='text-foreground max-w-[100%] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap font-normal hover:underline'
+              style={{ fontSize: '12px' }}
+              onClick={handleTitleClick}
+            >
+              {file.name}
+            </div>
+          </Tooltip>
+        )}
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-1'>
+            <Tooltip
+              title={t('tips.file_size', {
+                bytes: file.bytesSize?.toLocaleString(),
+                formatted_disk_size: file.formattedDiskSize,
+              })}
+            >
+              <span
+                className={cn(
+                  'text-[12px] text-gray-500',
+                  file.status === ICompressor.Status.Completed &&
+                    file.compressedBytesSize &&
+                    'line-through',
+                )}
+              >
+                {file.formattedBytesSize}
+              </span>
+            </Tooltip>
+            {file.status === ICompressor.Status.Completed && file.compressedBytesSize && (
+              <span className='text-[12px] text-gray-500'>{file.formattedCompressedBytesSize}</span>
+            )}
+          </div>
+          {file.status === ICompressor.Status.Completed && file.compressRate ? (
+            <div className='flex items-center gap-1'>
+              <span
+                className={cn(
+                  'text-[12px] font-bold text-gray-500',
+                  file.compressedBytesSize <= file.bytesSize ? 'text-green-500' : 'text-red-500',
+                )}
+              >
+                {file.compressedBytesSize <= file.bytesSize
+                  ? `-${file.compressRate}`
+                  : `+${file.compressRate}`}
+              </span>
+              {file.targetSizeAchieved === false && (
+                <Tooltip title={t('compression.options.target_size.not_achieved')} arrow={false}>
+                  <span className='cursor-default text-[10px] text-amber-500'>⚠</span>
+                </Tooltip>
+              )}
+            </div>
+          ) : (
+            <StatusBadge status={file.status} errorMessage={file.errorMessage} />
+          )}
+        </div>
+        {isValidArray(file.convertResults) && file.status === ICompressor.Status.Completed && (
+          <>
+            <Divider className='!my-0' plain>
+              <span className='text-xs text-neutral-500'>
+                {t('settings.compression.convert.enable.title')}
+              </span>
+            </Divider>
+            <div className='mt-1 flex items-center justify-center gap-[2px]'>
+              {file.convertResults.map((item) => (
+                <Tooltip
+                  title={
+                    <span className='break-all'>
+                      {item.success ? item.output_path : item.error_msg}
+                    </span>
+                  }
+                  key={item.format}
+                  arrow={false}
+                >
+                  <Badge
+                    variant={item.success ? 'midnight' : 'destructive'}
+                    className='cursor-pointer px-[4px] py-[2px] text-[10px]'
+                    data-src={item.output_path}
+                    onClick={handleRevealFile}
+                  >
+                    <span className='uppercase'>{item.format}</span>
+                  </Badge>
+                </Tooltip>
+              ))}
+            </div>
+          </>
+        )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default memo(FileCard);
+
+const StatusBadge = ({ status, errorMessage }: Pick<FileInfo, 'status' | 'errorMessage'>) => {
+  const t = useI18n();
+  const className = 'h-[18px] rounded-sm px-[6px] py-[0px] text-[12px] border-none select-none';
+  return (
+    <div>
+      {status === ICompressor.Status.Processing && (
+        <Badge variant='processing' className={className}>
+          <RefreshCw className='mr-1 h-3 w-3 animate-spin' />
+          {t('processing')}
+        </Badge>
+      )}
+      {status === ICompressor.Status.Failed && (
+        <Tooltip title={errorMessage} arrow={false} placement='bottom'>
+          <Badge variant='error' className={`${className} cursor-help`}>
+            {t('failed')}
+          </Badge>
+        </Tooltip>
+      )}
+      {status === ICompressor.Status.Completed && (
+        <Badge variant='success' className={className}>
+          {t('saved')}
+        </Badge>
+      )}
+      {status === ICompressor.Status.Undone && (
+        <Badge variant='minor' className={className}>
+          {t('undo.undone')}
+        </Badge>
+      )}
+      {status === ICompressor.Status.Skipped && (
+        <span className={className} style={{ color: 'rgb(11, 137, 255)' }}>
+          {t('compression.options.mode.filter')}
+        </span>
+      )}
+      {status === ICompressor.Status.Pending && (
+        <Badge variant='minor' className={className}>
+          {t('page.compression.watch.status.pending')}
+        </Badge>
+      )}
+    </div>
+  );
+};
