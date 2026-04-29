@@ -56,7 +56,7 @@ function SettingsAboutVersion() {
       //       license: (
       //         <a
       //           target='_blank'
-      //           href='https://github.com/AkiraBit/PicSharp?tab=AGPL-3.0-1-ov-file#readme'
+      //           href='https://github.com/a869642521/openpic?tab=AGPL-3.0-1-ov-file#readme'
       //           className='text-blue-500 underline'
       //         />
       //       ),

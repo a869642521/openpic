@@ -4,10 +4,10 @@
   "description": "VeryPic Sidecar",
   "author": "AkiraBit",
   "license": "AGPL-3.0",
-  "repository": "AkiraBit/PicSharp",
-  "homepage": "https://github.com/AkiraBit/PicSharp",
+  "repository": "a869642521/openpic",
+  "homepage": "https://github.com/a869642521/openpic",
   "bugs": {
-    "url": "https://github.com/AkiraBit/PicSharp/issues"
+    "url": "https://github.com/a869642521/openpic/issues"
   },
   "private": true,
   "scripts": {

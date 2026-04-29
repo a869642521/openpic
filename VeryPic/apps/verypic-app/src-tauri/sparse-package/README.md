@@ -13,7 +13,7 @@ cargo build -p verypic-shell-command --release
 $packDir = "$env:TEMP\VeryPicSparsePkg"
 New-Item -ItemType Directory -Force -Path $packDir | Out-Null
 Copy-Item target\release\verypic_shell_command.dll $packDir
-Copy-Item apps\picsharp-app\src-tauri\sparse-package\AppxManifest.xml $packDir
+Copy-Item apps\verypic-app\src-tauri\sparse-package\AppxManifest.xml $packDir
 # 按需复制 StoreLogo.png 到 $packDir\Assets\
 # & $makeappx pack /d $packDir /p "$packDir\VeryPic.ContextMenu.appx"
 # Add-AppxPackage -Path "$packDir\VeryPic.ContextMenu.appx" -Register

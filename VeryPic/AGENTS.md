@@ -1,15 +1,15 @@
-# PicSharp AI 协作指引
+# VeryPic AI 协作指引
 
 ## 项目简介
 
-PicSharp 是跨平台图片压缩应用，支持 macOS、Windows、Linux。主要功能：
+VeryPic 是跨平台图片压缩应用，支持 macOS、Windows、Linux。主要功能：
 
 - **Classic 模式**：手动选择文件/目录进行批量压缩
 - **Watch 模式**：监听目录，自动压缩新增图片
 - **TinyPNG**：支持 API 密钥，云端压缩
 - **设置**：通用、压缩、TinyPNG 等配置
 
-技术栈：Tauri 2 + React 18 + Zustand + Vite + picsharp-sidecar（Node.js + Hono）。
+技术栈：Tauri 2 + React 18 + Zustand + Vite + verypic-sidecar（Node.js + Hono）。
 
 ## 开发前必读
 

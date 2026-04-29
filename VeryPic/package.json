@@ -7,10 +7,10 @@
     "email": "fengyvxiu@gmail.com"
   },
   "license": "AGPL-3.0",
-  "repository": "AkiraBit/PicSharp",
-  "homepage": "https://github.com/AkiraBit/PicSharp",
+  "repository": "a869642521/openpic",
+  "homepage": "https://github.com/a869642521/openpic",
   "bugs": {
-    "url": "https://github.com/AkiraBit/PicSharp/issues"
+    "url": "https://github.com/a869642521/openpic/issues"
   },
   "scripts": {
     "dev": "concurrently -n sidecar,app -c blue,green \"pnpm dev-sidecar:server\" \"pnpm dev-app\"",

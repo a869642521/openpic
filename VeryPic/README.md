@@ -1,28 +1,28 @@
 <!-- <div align="center">
   <a href="" target="_blank">
-    <img src="./doc/logo.png" alt="PicSharp Logo" width="20%" />
+    <img src="./doc/logo.png" alt="VeryPic Logo" width="20%" />
   </a>
-  <h1>PicSharp</h1>
+  <h1>VeryPic</h1>
   <br>
 </div> -->
 
-![PicSharp](./doc/picsharp_banner.webp)
+![VeryPic](./doc/picsharp_banner.webp)
 
 <div align="center">
   <div>
-    <a href="https://github.com/AkiraBit/PicSharp/releases">
+    <a href="https://github.com/a869642521/openpic/releases">
       <img
         alt="MacOS"
         src="https://img.shields.io/badge/-MacOS-black?style=flat-square&logo=apple&logoColor=white"
       />
     </a>
-    <a href="https://github.com/AkiraBit/PicSharp/releases">
+    <a href="https://github.com/a869642521/openpic/releases">
       <img
         alt="Windows"
         src="https://img.shields.io/badge/-Windows-blue?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB0PSIxNzI2MzA1OTcxMDA2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjE1NDgiIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4Ij48cGF0aCBkPSJNNTI3LjI3NTU1MTYxIDk2Ljk3MTAzMDEzdjM3My45OTIxMDY2N2g0OTQuNTEzNjE5NzVWMTUuMDI2NzU3NTN6TTUyNy4yNzU1NTE2MSA5MjguMzIzNTA4MTVsNDk0LjUxMzYxOTc1IDgwLjUyMDI4MDQ5di00NTUuNjc3NDcxNjFoLTQ5NC41MTM2MTk3NXpNNC42NzA0NTEzNiA0NzAuODMzNjgyOTdINDIyLjY3Njg1OTI1VjExMC41NjM2ODE5N2wtNDE4LjAwNjQwNzg5IDY5LjI1Nzc5NzUzek00LjY3MDQ1MTM2IDg0Ni43Njc1OTcwM0w0MjIuNjc2ODU5MjUgOTE0Ljg2MDMxMDEzVjU1My4xNjYzMTcwM0g0LjY3MDQ1MTM2eiIgcC1pZD0iMTU0OSIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg=="
       />
     </a>
-    <a href="https://github.com/AkiraBit/PicSharp/releases">
+    <a href="https://github.com/a869642521/openpic/releases">
       <img
         alt="Linux"
         src="https://img.shields.io/badge/-Linux-yellow?style=flat-square&logo=linux&logoColor=white"
@@ -33,17 +33,17 @@
   <p>
     <a href="./LICENSE">
       <img
-        src="https://img.shields.io/github/license/AkiraBit/PicSharp?style=flat-square"
+        src="https://img.shields.io/github/license/a869642521/openpic?style=flat-square"
       />
     </a>
-    <a href="https://github.com/AkiraBit/PicSharp/releases/latest">
+    <a href="https://github.com/a869642521/openpic/releases/latest">
       <img
-        src="https://img.shields.io/github/package-json/v/AkiraBit/PicSharp?style=flat-square"
+        src="https://img.shields.io/github/package-json/v/a869642521/openpic?style=flat-square"
       />
     </a>
-    <a href="https://github.com/AkiraBit/PicSharp/releases">
+    <a href="https://github.com/a869642521/openpic/releases">
       <img
-        src="https://img.shields.io/github/downloads/AkiraBit/PicSharp/total?style=flat-square"
+        src="https://img.shields.io/github/downloads/a869642521/openpic/total?style=flat-square"
       />
     </a>
   </p>
@@ -160,7 +160,7 @@ AppImage is a distribution format that does not rely on the system installed pac
 
 **1. Download**
 
-Go to the [download page](https://github.com/AkiraBit/PicSharp/releases) to download the AppImage file corresponding to the system architecture.
+Go to the [download page](https://github.com/a869642521/openpic/releases) to download the AppImage file corresponding to the system architecture.
 
 **2. Set Permissions**
 
@@ -190,10 +190,10 @@ sed -i 's/^Icon=.*/Icon=PicSharp/g' squashfs-root/usr/share/applications/picshar
 
 sudo install -Dm644 squashfs-root/usr/share/applications/picsharp.desktop /usr/share/applications/PicSharp.desktop
 
-wget "https://raw.githubusercontent.com/AkiraBit/PicSharp/main/doc/logo.png" -O PicSharp.png
+wget "https://raw.githubusercontent.com/a869642521/openpic/master/VeryPic/doc/logo.png" -O VeryPic.png
 
-sudo install -Dm644 PicSharp.png /usr/share/icons/hicolor/48x48/apps/PicSharp.png
-rm -r squashfs-root PicSharp.png
+sudo install -Dm644 VeryPic.png /usr/share/icons/hicolor/48x48/apps/VeryPic.png
+rm -r squashfs-root VeryPic.png
 
 mkdir -p /opt/picsharp
 
@@ -204,11 +204,11 @@ This command enables the AppImage application to be launched from the applicatio
 
 ## Development
 
-To get started with PicSharp, follow these steps to clone and build the project.
+To get started with VeryPic, follow these steps to clone and build the project.
 
 ```bash
-git clone https://github.com/AkiraBit/PicSharp.git
-cd PicSharp
+git clone https://github.com/a869642521/openpic.git
+cd openpic/VeryPic
 ```
 
 **Requirements**
@@ -257,10 +257,10 @@ If you enjoy this project consider giving it a star ⭐.
 
 ## Star History
 
-<a href="https://www.star-history.com/#AkiraBit/PicSharp&Date">
+<a href="https://www.star-history.com/#a869642521/openpic&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=AkiraBit/PicSharp&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=AkiraBit/PicSharp&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=AkiraBit/PicSharp&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=a869642521/openpic&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=a869642521/openpic&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=a869642521/openpic&type=Date" />
  </picture>
 </a>

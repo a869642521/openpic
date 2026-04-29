@@ -34,7 +34,7 @@ function Toast(props: ToastProps) {
             {t('tips.service_startup_failed')}
           </div>
           <div className='focus:outline-hidden ml-2 shrink-0 rounded-md text-sm font-medium focus:ring-offset-2'>
-            <a href='https://github.com/AkiraBit/PicSharp/issues' target='_blank'>
+            <a href='https://github.com/a869642521/openpic/issues' target='_blank'>
               <Button size='sm' variant='default' className='px-1 py-1'>
                 <span className='text-[12px]'>{t('menu.report_issue')}</span>
               </Button>

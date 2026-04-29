@@ -8,8 +8,8 @@ resolver = "2"
 [workspace.package]
 authors = ["JaylenLee117"]
 license = "AGPL-3.0"
-homepage = "https://github.com/AkiraBit/PicSharp"
-repository = "https://github.com/AkiraBit/PicSharp"
+homepage = "https://github.com/a869642521/openpic"
+repository = "https://github.com/a869642521/openpic"
 categories = []
 edition = "2021"
 rust-version = "1.82.0"

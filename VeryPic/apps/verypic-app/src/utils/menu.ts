@@ -96,7 +96,7 @@ export async function initAppMenu() {
       await MenuItem.new({
         text: t('menu.report_issue'),
         action: () => {
-          open('https://github.com/AkiraBit/PicSharp/issues');
+          open('https://github.com/a869642521/openpic/issues');
         },
       }),
       await PredefinedMenuItem.new({
@@ -105,7 +105,7 @@ export async function initAppMenu() {
       await MenuItem.new({
         text: t('menu.star_on_github'),
         action: () => {
-          open('https://github.com/AkiraBit/PicSharp');
+          open('https://github.com/a869642521/openpic');
         },
       }),
     ],

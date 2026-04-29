@@ -19,16 +19,16 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v6
       - name: get version
-        run: echo "PACKAGE_VERSION=$(node -p "require('./apps/picsharp-app/package.json').version")" >> $GITHUB_ENV
+        run: echo "PACKAGE_VERSION=$(node -p "require('./apps/verypic-app/package.json').version")" >> $GITHUB_ENV
       - name: get release notes
         id: get-release-notes
         uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
-            const version = require('./apps/picsharp-app/package.json').version;
+            const version = require('./apps/verypic-app/package.json').version;
             console.log('Version:', version);
-            const releaseNotesFileContent = fs.readFileSync('./apps/picsharp-app/release-notes.json', 'utf8');
+            const releaseNotesFileContent = fs.readFileSync('./apps/verypic-app/release-notes.json', 'utf8');
             const releaseNotes = JSON.parse(releaseNotesFileContent).releases[version] || {};
             const notes = releaseNotes.notes || [];
             const releaseNote = notes.map((note, index) => `${index + 1}. ${note}`).join('\n');
@@ -81,7 +81,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: 'apps/picsharp-app/src-tauri -> target'
+          workspaces: 'apps/verypic-app/src-tauri -> target'
 
       - name: Install App Framework (ubuntu only)
         if: contains(matrix.platform, 'ubuntu')
@@ -99,7 +99,7 @@ jobs:
           else
             npm install
           fi
-        working-directory: packages/picsharp-sidecar
+        working-directory: packages/verypic-sidecar
 
       - name: Find Signing Sidecar Binary
         # if: matrix.platform == 'macos-latest' || matrix.platform == 'windows-latest'
@@ -113,7 +113,7 @@ jobs:
 
             if [[ -n "$sharp_node_file_path" ]]; then
               echo "Found sharp .node file: $sharp_node_file_path"
-              echo "sharp_node_file=packages/picsharp-sidecar/$sharp_node_file_path" >> $GITHUB_OUTPUT
+              echo "sharp_node_file=packages/verypic-sidecar/$sharp_node_file_path" >> $GITHUB_OUTPUT
             else
               echo "No sharp .node files found."
               echo "sharp_node_file=" >> $GITHUB_OUTPUT
@@ -121,7 +121,7 @@ jobs:
 
             if [[ -n "$rs_image_node_file_path" ]]; then
               echo "Found rs-image .node file: $rs_image_node_file_path"
-              echo "rs_image_node_file=packages/picsharp-sidecar/$rs_image_node_file_path" >> $GITHUB_OUTPUT
+              echo "rs_image_node_file=packages/verypic-sidecar/$rs_image_node_file_path" >> $GITHUB_OUTPUT
             else
               echo "No rs-image .node files found."
               echo "rs_image_node_file=" >> $GITHUB_OUTPUT
@@ -132,7 +132,7 @@ jobs:
 
             if [[ -n "$sharp_dylib_file_path" ]]; then
               echo "Found sharp .dylib file: $sharp_dylib_file_path"
-              echo "sharp_dylib_file=packages/picsharp-sidecar/$sharp_dylib_file_path" >> $GITHUB_OUTPUT
+              echo "sharp_dylib_file=packages/verypic-sidecar/$sharp_dylib_file_path" >> $GITHUB_OUTPUT
             else
               echo "No sharp .dylib files found."
               echo "sharp_dylib_file=" >> $GITHUB_OUTPUT
@@ -144,7 +144,7 @@ jobs:
 
             if [[ -n "$sharp_node_file_path" ]]; then
               echo "Found sharp .node file: $sharp_node_file_path"
-              echo "sharp_node_file=packages/picsharp-sidecar/$sharp_node_file_path" >> $GITHUB_OUTPUT
+              echo "sharp_node_file=packages/verypic-sidecar/$sharp_node_file_path" >> $GITHUB_OUTPUT
             else
               echo "No sharp .node files found."
               echo "sharp_node_file=" >> $GITHUB_OUTPUT
@@ -152,7 +152,7 @@ jobs:
 
             if [[ -n "$rs_image_node_file_path" ]]; then
               echo "Found rs-image .node file: $rs_image_node_file_path"
-              echo "rs_image_node_file=packages/picsharp-sidecar/$rs_image_node_file_path" >> $GITHUB_OUTPUT
+              echo "rs_image_node_file=packages/verypic-sidecar/$rs_image_node_file_path" >> $GITHUB_OUTPUT
             else
               echo "No rs-image .node files found."
               echo "rs_image_node_file=" >> $GITHUB_OUTPUT
@@ -163,13 +163,13 @@ jobs:
 
             if [[ -n "$sharp_dll_file_path" ]]; then
               echo "Found sharp .dll file: $sharp_dll_file_path"
-              echo "sharp_dll_file=packages/picsharp-sidecar/$sharp_dll_file_path" >> $GITHUB_OUTPUT
+              echo "sharp_dll_file=packages/verypic-sidecar/$sharp_dll_file_path" >> $GITHUB_OUTPUT
             else
               echo "No sharp .dll files found."
               echo "sharp_dll_file=" >> $GITHUB_OUTPUT
             fi
           fi
-        working-directory: packages/picsharp-sidecar
+        working-directory: packages/verypic-sidecar
 
       - name: Code Signing Sidecar Sharp .node Binary (MacOS Only)
         if: matrix.platform == 'macos-latest'
@@ -262,7 +262,7 @@ jobs:
           elif [[ "${{ matrix.config.arch }}" == "aarch64-unknown-linux-gnu" ]]; then
             npm run build-sea:linux-arm64
           fi
-        working-directory: packages/picsharp-sidecar
+        working-directory: packages/verypic-sidecar
 
       - name: Move sidecar binary
         uses: actions/github-script@v8
@@ -278,11 +278,11 @@ jobs:
 
             let ext = platform.includes("windows") ? ".exe" : "";
 
-            const sourceDir = 'packages/picsharp-sidecar/bin';
-            const destDir = 'apps/picsharp-app/src-tauri/binaries';
+            const sourceDir = 'packages/verypic-sidecar/bin';
+            const destDir = 'apps/verypic-app/src-tauri/binaries';
 
-            const sourceFile = path.join(sourceDir, `picsharp-sidecar-${arch}${ext}`);
-            const destFile = path.join(destDir, `picsharp-sidecar-${arch}${ext}`);
+            const sourceFile = path.join(sourceDir, `verypic-sidecar-${arch}${ext}`);
+            const destFile = path.join(destDir, `verypic-sidecar-${arch}${ext}`);
 
             core.info(`Source file: ${sourceFile}`);
             core.info(`Destination file: ${destFile}`);
@@ -299,7 +299,7 @@ jobs:
 
       - name: Install frontend dependencies for main app
         run: npm install
-        working-directory: apps/picsharp-app
+        working-directory: apps/verypic-app
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -317,9 +317,9 @@ jobs:
           PICSHARP_SIDECAR_SENTRY_DSN: ${{ secrets.PICSHARP_SIDECAR_SENTRY_DSN }}
           PICSHARP_ABE_KEY: ${{ secrets.PICSHARP_ABE_KEY }}
         with:
-          projectPath: apps/picsharp-app
+          projectPath: apps/verypic-app
           tagName: v__VERSION__
-          releaseName: 'PicSharp v__VERSION__'
+          releaseName: 'VeryPic v__VERSION__'
           releaseBody: ${{ needs.get-release.outputs.release_note }}
           args: ${{ matrix.config.args || '' }}
 
@@ -328,4 +328,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Uploading release notes to GitHub release"
-          gh release upload v${{ needs.get-release.outputs.release_version }} apps/picsharp-app/release-notes.json --clobber
+          gh release upload v${{ needs.get-release.outputs.release_version }} apps/verypic-app/release-notes.json --clobber
